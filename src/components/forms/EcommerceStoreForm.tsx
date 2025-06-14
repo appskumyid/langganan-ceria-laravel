@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Youtube, Facebook, Linkedin } from "lucide-react";
-import { Instagram } from "lucide-react";
+import { Loader2, Youtube, Facebook, Linkedin, Instagram } from "lucide-react";
+import ProductManager from "./product/ProductManager";
 
 
 const formSchema = z.object({
@@ -172,21 +172,21 @@ const EcommerceStoreForm = ({ subscription }: EcommerceStoreFormProps) => {
           )} />
         </div>
         
-        <div className="pt-4">
-          <h3 className="text-lg font-medium">Produk Toko</h3>
-          <p className="text-sm text-muted-foreground mb-4">Fitur untuk menambah dan mengelola produk akan segera tersedia.</p>
-          <Button type="button" variant="outline" disabled>Kelola Produk (Segera Hadir)</Button>
-        </div>
-
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-4">
           <Button type="submit" disabled={upsertMutation.isPending}>
             {upsertMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Perubahan
+            Simpan Perubahan Detail Toko
           </Button>
         </div>
       </form>
+      
+      <div className="border-t pt-8 mt-8">
+        <ProductManager storeDetails={storeDetails} />
+      </div>
+
     </Form>
   );
 };
 
 export default EcommerceStoreForm;
+
