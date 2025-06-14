@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,8 +11,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
+  DialogTrigger,
   DialogClose,
   DialogDescription,
 } from '@/components/ui/dialog';
@@ -21,7 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Pencil, Trash2, Upload } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -31,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { v4 as uuidv4 } from 'uuid';
+import { CsvUploadDialog } from './CsvUploadDialog';
 
 interface ProductManagerProps {
   storeDetails: Tables<'store_details'> | null;
@@ -50,6 +50,7 @@ const productFormSchema = z.object({
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
+type ProductCsvRow = Omit<Tables<'store_products'>, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'store_details_id'>;
 
 const fetchProducts = async (storeId: string) => {
   const { data, error } = await supabase.from('store_products').select('*').eq('store_details_id', storeId).order('created_at', { ascending: false });
@@ -60,7 +61,8 @@ const fetchProducts = async (storeId: string) => {
 const ProductManager = ({ storeDetails }: ProductManagerProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Tables<'store_products'> | null>(null);
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
@@ -113,10 +115,39 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
     onSuccess: () => {
       toast({ title: 'Sukses', description: `Produk berhasil ${editingProduct ? 'diperbarui' : 'ditambahkan'}.` });
       queryClient.invalidateQueries({ queryKey: ['products', storeDetails?.id] });
-      setIsDialogOpen(false);
+      setIsFormDialogOpen(false);
     },
     onError: (error) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const bulkUpsertMutation = useMutation({
+    mutationFn: async (newProducts: ProductCsvRow[]) => {
+      if (!storeDetails) throw new Error('Detail toko tidak ditemukan.');
+      
+      const productsToUpsert = newProducts.map(p => ({
+        ...p,
+        price: Number(p.price) || 0,
+        store_details_id: storeDetails.id,
+        user_id: storeDetails.user_id,
+      }));
+
+      const { data, error } = await supabase
+        .from('store_products')
+        .upsert(productsToUpsert)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Sukses', description: `${data?.length} produk berhasil diunggah.` });
+      queryClient.invalidateQueries({ queryKey: ['products', storeDetails?.id] });
+      setIsCsvDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({ variant: 'destructive', title: 'Error', description: `Gagal mengunggah produk: ${error.message}` });
     },
   });
 
@@ -141,7 +172,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
   const handleAddNew = () => {
     setEditingProduct(null);
     form.reset({ name: '', price: 0, description: '', image_url: '', image_file: undefined, category: '' });
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
   
   const handleEdit = (product: Tables<'store_products'>) => {
@@ -153,7 +184,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
       image_url: product.image_url ?? '',
       category: product.category ?? '',
     });
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
 
   if (!storeDetails) {
@@ -175,7 +206,10 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
           <h3 className="text-lg font-medium">Produk Toko</h3>
           <p className="text-sm text-muted-foreground">Tambah dan kelola produk yang Anda jual.</p>
         </div>
-        <Button onClick={handleAddNew} type="button"><PlusCircle className="mr-2 h-4 w-4" /> Tambah Produk</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsCsvDialogOpen(true)} type="button" variant="outline"><Upload className="mr-2 h-4 w-4" /> Unggah CSV</Button>
+          <Button onClick={handleAddNew} type="button"><PlusCircle className="mr-2 h-4 w-4" /> Tambah Produk</Button>
+        </div>
       </div>
 
       {isLoadingProducts ? (
@@ -225,7 +259,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Ubah Produk' : 'Tambah Produk Baru'}</DialogTitle>
@@ -271,6 +305,15 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {storeDetails && (
+        <CsvUploadDialog
+          isOpen={isCsvDialogOpen}
+          onOpenChange={setIsCsvDialogOpen}
+          onUpload={bulkUpsertMutation.mutateAsync}
+          isUploading={bulkUpsertMutation.isPending}
+        />
+      )}
     </div>
   );
 };
