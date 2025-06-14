@@ -17,6 +17,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import MySubscriptions from "./pages/MySubscriptions"; // Import baru
 import AdminSubscriptionDetail from './pages/AdminSubscriptionDetail';
+import SubscriptionDetail from './pages/SubscriptionDetail';
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,16 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <MySubscriptions />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/my-subscriptions/:subscriptionId" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SubscriptionDetail />
                 </Layout>
               </ProtectedRoute>
             } 

@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 interface SubscriptionsTableProps {
   subscriptions: Tables<'user_subscriptions'>[];
@@ -38,6 +40,7 @@ const SubscriptionsTable = ({ subscriptions }: SubscriptionsTableProps) => {
                             <TableHead>Status</TableHead>
                             <TableHead>Tgl. Langganan</TableHead>
                             <TableHead>Tgl. Berakhir</TableHead>
+                            <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -50,8 +53,15 @@ const SubscriptionsTable = ({ subscriptions }: SubscriptionsTableProps) => {
                                         {sub.subscription_status.replace(/_/g, ' ').toUpperCase()}
                                     </Badge>
                                 </TableCell>
-                                <TableCell>{new Date(sub.subscribed_at).toLocaleDateString('id-ID')}</TableCell>
+                                <TableCell>{sub.subscribed_at ? new Date(sub.subscribed_at).toLocaleDateString('id-ID') : '-'}</TableCell>
                                 <TableCell>{sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('id-ID') : '-'}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link to={`/my-subscriptions/${sub.id}`}>
+                                            Detail
+                                        </Link>
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
