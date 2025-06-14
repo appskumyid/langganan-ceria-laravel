@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud, Download } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -30,6 +31,23 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ProductCsvRow[]>([]);
   const [error, setError] = useState('');
+
+  const handleDownloadTemplate = () => {
+    const headers = ['name', 'price', 'category', 'description', 'image_url'];
+    const exampleRow = ['Kaos Polos Keren', '75000', 'Pakaian', 'Kaos katun combed 30s, nyaman dipakai', 'https://example.com/image.jpg'];
+    const csvContent = [headers.join(','), exampleRow.join(',')].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'template_produk.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -98,7 +116,13 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <Input type="file" accept=".csv" onChange={handleFileChange} />
+          <div className="flex items-center gap-4">
+            <Input type="file" accept=".csv" onChange={handleFileChange} className="flex-1" />
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              Unduh Template
+            </Button>
+          </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           {parsedData.length > 0 && (
             <div className="rounded-md border max-h-64 overflow-y-auto">
