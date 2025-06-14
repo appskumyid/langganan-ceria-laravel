@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, MessageCircle, Play, Crown, Search } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import CheckoutDialog from "@/components/CheckoutDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   id: number;
@@ -135,9 +138,20 @@ const Products = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubscribe = (product: Product) => {
+    if (!user) {
+      toast({
+        title: "Silakan Masuk",
+        description: "Anda perlu masuk untuk dapat berlangganan produk.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
     setSelectedProduct(product);
     setIsCheckoutOpen(true);
   };
@@ -367,7 +381,9 @@ const Products = () => {
             id: selectedProduct.id,
             name: selectedProduct.name,
             price: selectedProduct.price,
-            period: selectedProduct.period
+            period: selectedProduct.period,
+            category: selectedProduct.category,
+            type: selectedProduct.type,
           }}
         />
       )}

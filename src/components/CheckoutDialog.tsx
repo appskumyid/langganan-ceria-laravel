@@ -1,22 +1,30 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { CreditCard, Building2, Wallet, Smartphone } from "lucide-react";
+import { CreditCard, Building2, Wallet, Smartphone, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+
+interface ProductForCheckout {
+  id: number;
+  name: string;
+  price: string;
+  period: string;
+  category: string;
+  type: "Premium" | "Non-Premium";
+}
 
 interface CheckoutDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  product: {
-    id: number;
-    name: string;
-    price: string;
-    period: string;
-  };
+  product: ProductForCheckout;
 }
 
 const paymentMethods = [
@@ -47,23 +55,84 @@ const paymentMethods = [
 ];
 
 const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   const [selectedPayment, setSelectedPayment] = useState("transfer");
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
     email: "",
-    phone: ""
+    phone: "",
   });
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleCheckout = () => {
-    console.log("Processing checkout:", {
-      product,
-      paymentMethod: selectedPayment,
-      customerInfo
-    });
-    
-    // Simulate checkout process
-    alert(`Checkout berhasil untuk ${product.name} dengan metode ${paymentMethods.find(p => p.id === selectedPayment)?.name}`);
-    onClose();
+  useEffect(() => {
+    if (user && isOpen) {
+      setCustomerInfo({
+        name: user.user_metadata?.full_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user, isOpen]);
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Anda harus login untuk berlangganan.",
+        variant: "destructive",
+      });
+      onClose();
+      navigate('/auth');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    let expiresAt = null;
+    if (product.period === "/bulan") {
+      const date = new Date();
+      date.setMonth(date.getMonth() + 1);
+      expiresAt = date.toISOString();
+    }
+
+    const subscriptionData = {
+      user_id: user.id,
+      product_static_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_period: product.period,
+      product_category: product.category,
+      product_type: product.type,
+      subscription_status: 'pending_payment' as const,
+      payment_method_selected: selectedPayment,
+      customer_name: customerInfo.name,
+      customer_email: customerInfo.email,
+      customer_phone: customerInfo.phone,
+      expires_at: expiresAt,
+    };
+
+    const { error } = await supabase.from('user_subscriptions').insert(subscriptionData);
+
+    setIsProcessing(false);
+
+    if (error) {
+      console.error("Error creating subscription:", error);
+      toast({
+        title: "Gagal Berlangganan",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Berhasil!",
+        description: "Produk telah ditambahkan ke langganan Anda. Silakan selesaikan pembayaran.",
+      });
+      onClose();
+      navigate('/my-subscriptions');
+    }
   };
 
   const isFormValid = customerInfo.name && customerInfo.email && customerInfo.phone;
@@ -145,8 +214,9 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
             <Button 
               onClick={handleCheckout} 
               className="flex-1"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isProcessing}
             >
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Lanjut Pembayaran
             </Button>
           </div>

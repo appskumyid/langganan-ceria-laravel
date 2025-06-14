@@ -1,16 +1,18 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface SubscribedProductCardProps {
   subscription: Tables<'user_subscriptions'>;
 }
 
 const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => {
+  const { toast } = useToast();
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'active':
@@ -24,6 +26,13 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
       default:
         return 'default';
     }
+  };
+
+  const handleSubmitPayment = () => {
+    toast({
+      title: "Proses Pembayaran",
+      description: "Fitur pembayaran akan segera diimplementasikan. Status Anda masih 'pending payment'.",
+    });
   };
 
   return (
@@ -56,20 +65,25 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
           </div>
         )}
         
-        {/* Tombol Detail akan ditambahkan nanti jika diperlukan untuk navigasi ke halaman detail spesifik */}
-        {/* Untuk E-Commerce Non-Premium, tombol ini bisa mengarah ke edit store */}
-        {subscription.product_category === 'E-Commerce' && subscription.product_type === 'Non-Premium' && (
-           <Button asChild className="w-full">
-            <Link to={`/my-subscriptions/${subscription.id}/edit-store`}>
-              Kelola Toko <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+        {subscription.subscription_status === 'pending_payment' ? (
+          <Button onClick={handleSubmitPayment} className="w-full bg-orange-500 hover:bg-orange-600">
+            Selesaikan Pembayaran <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-        )}
-         {/* Placeholder untuk tombol detail produk lainnya */}
-        {(subscription.product_category !== 'E-Commerce' || subscription.product_type !== 'Non-Premium') && (
-          <Button variant="outline" className="w-full" disabled>
-            Lihat Detail (Segera Hadir)
-          </Button>
+        ) : (
+          <>
+            {subscription.product_category === 'E-Commerce' && subscription.product_type === 'Non-Premium' && (
+               <Button asChild className="w-full">
+                <Link to={`/my-subscriptions/${subscription.id}/edit-store`}>
+                  Kelola Toko <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+            {(subscription.product_category !== 'E-Commerce' || subscription.product_type !== 'Non-Premium') && (
+              <Button variant="outline" className="w-full" disabled>
+                Lihat Detail (Segera Hadir)
+              </Button>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
