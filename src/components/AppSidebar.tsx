@@ -43,7 +43,7 @@ export function AppSidebar() {
     isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible>
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="offcanvas">
       <SidebarTrigger className="m-2 self-end" />
 
       <SidebarContent>

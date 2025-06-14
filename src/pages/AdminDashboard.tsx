@@ -36,15 +36,28 @@ const AdminDashboard = () => {
             id,
             email,
             full_name,
-            created_at,
-            user_roles (role)
+            created_at
           `)
           .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching members:', error);
         } else {
-          setMembers(data || []);
+          // Fetch user roles separately
+          const profilesWithRoles = await Promise.all(
+            (data || []).map(async (profile) => {
+              const { data: roleData } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', profile.id);
+
+              return {
+                ...profile,
+                user_roles: roleData || []
+              };
+            })
+          );
+          setMembers(profilesWithRoles);
         }
       } catch (error) {
         console.error('Error fetching members:', error);
