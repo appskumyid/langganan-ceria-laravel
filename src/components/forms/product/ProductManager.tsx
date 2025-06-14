@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,17 +81,19 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
         imageUrl = urlData.publicUrl;
       }
 
-      const { id, image_file, ...productData } = values;
+      const productToUpsert = {
+        id: editingProduct?.id,
+        store_details_id: storeDetails.id,
+        user_id: storeDetails.user_id,
+        name: values.name,
+        price: values.price,
+        description: values.description,
+        image_url: imageUrl,
+      };
 
       const { data, error } = await supabase
         .from('store_products')
-        .upsert({
-          id: editingProduct?.id,
-          store_details_id: storeDetails.id,
-          user_id: storeDetails.user_id,
-          ...productData,
-          image_url: imageUrl,
-        })
+        .upsert(productToUpsert)
         .select()
         .single();
       
