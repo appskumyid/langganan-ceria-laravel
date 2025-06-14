@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, MessageCircle, Play, Crown, Search } from "lucide-react";
+import { Eye, MessageCircle, Play, Crown, Search, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import CheckoutDialog from "@/components/CheckoutDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -138,9 +137,25 @@ const Products = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Berhasil keluar",
+        description: "Sampai jumpa lagi!"
+      });
+    }
+  };
 
   const handleSubscribe = (product: Product) => {
     if (!user) {
@@ -289,17 +304,34 @@ const Products = () => {
               >
                 Service
               </NavLink>
-              <NavLink 
-                to="/auth" 
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Masuk
-              </NavLink>
-              <Button asChild>
-                <NavLink to="/auth">
-                  Daftar
-                </NavLink>
-              </Button>
+              {user ? (
+                <>
+                  <NavLink
+                    to="/"
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Dashboard
+                  </NavLink>
+                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4" />
+                    Keluar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink 
+                    to="/auth" 
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Masuk
+                  </NavLink>
+                  <Button asChild>
+                    <NavLink to="/auth">
+                      Daftar
+                    </NavLink>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

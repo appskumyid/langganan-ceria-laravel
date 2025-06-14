@@ -1,10 +1,8 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreditCard, Building2, Wallet, Smartphone, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,22 +58,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
   const { toast } = useToast();
 
   const [selectedPayment, setSelectedPayment] = useState("transfer");
-  const [customerInfo, setCustomerInfo] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  });
   const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    if (user && isOpen) {
-      setCustomerInfo({
-        name: user.user_metadata?.full_name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-      });
-    }
-  }, [user, isOpen]);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -108,9 +91,9 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
       product_type: product.type,
       subscription_status: 'pending_payment' as const,
       payment_method_selected: selectedPayment,
-      customer_name: customerInfo.name,
-      customer_email: customerInfo.email,
-      customer_phone: customerInfo.phone,
+      customer_name: user.user_metadata?.full_name || user.email || '',
+      customer_email: user.email || '',
+      customer_phone: user.phone || '',
       expires_at: expiresAt,
     };
 
@@ -143,8 +126,6 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
     }
   };
 
-  const isFormValid = customerInfo.name && customerInfo.email && customerInfo.phone;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -167,30 +148,6 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Customer Information */}
-          <div className="space-y-3">
-            <h3 className="font-semibold">Informasi Pelanggan</h3>
-            <div className="space-y-2">
-              <Input
-                placeholder="Nama Lengkap"
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
-              />
-              <Input
-                type="email"
-                placeholder="Email"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
-              />
-              <Input
-                type="tel"
-                placeholder="Nomor Telepon"
-                value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-          </div>
 
           {/* Payment Methods */}
           <div className="space-y-3">
@@ -222,7 +179,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
             <Button 
               onClick={handleCheckout} 
               className="flex-1"
-              disabled={!isFormValid || isProcessing}
+              disabled={isProcessing}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Lanjut Pembayaran

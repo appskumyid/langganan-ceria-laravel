@@ -1,12 +1,33 @@
 
-import { useState } from 'react';
 import BannerSlide from '@/components/BannerSlide';
 import ProductList from '@/components/ProductList';
 import ServiceList from '@/components/ServiceList';
 import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut } from 'lucide-react';
 
 const Homepage = () => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Berhasil keluar",
+        description: "Sampai jumpa lagi!"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -35,17 +56,34 @@ const Homepage = () => {
               >
                 Service
               </NavLink>
-              <NavLink 
-                to="/auth" 
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Masuk
-              </NavLink>
-              <Button asChild>
-                <NavLink to="/auth">
-                  Daftar
-                </NavLink>
-              </Button>
+              {user ? (
+                <>
+                  <NavLink
+                    to="/"
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Dashboard
+                  </NavLink>
+                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4" />
+                    Keluar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink 
+                    to="/auth" 
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Masuk
+                  </NavLink>
+                  <Button asChild>
+                    <NavLink to="/auth">
+                      Daftar
+                    </NavLink>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
