@@ -16,7 +16,25 @@ const Homepage = () => {
             <div className="text-xl font-bold text-gray-900">
               Sistem Langganan
             </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-6">
+              <NavLink 
+                to="/home" 
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Home
+              </NavLink>
+              <NavLink 
+                to="/products" 
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Product
+              </NavLink>
+              <NavLink 
+                to="/services" 
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Service
+              </NavLink>
               <NavLink 
                 to="/auth" 
                 className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
