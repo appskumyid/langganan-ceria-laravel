@@ -14,12 +14,18 @@ import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
+interface PricingPeriod {
+  monthly: string;
+  quarterly: string;
+  semiAnnual: string;
+  yearly: string;
+}
+
 interface Product {
   id: number;
   name: string;
   description: string;
-  price: string;
-  period: string;
+  pricing: PricingPeriod;
   image: string;
   features: string[];
   demoUrl: string;
@@ -28,8 +34,10 @@ interface Product {
 interface ProductFormData {
   name: string;
   description: string;
-  price: string;
-  period: string;
+  monthlyPrice: string;
+  quarterlyPrice: string;
+  semiAnnualPrice: string;
+  yearlyPrice: string;
   image: string;
   features: string;
   demoUrl: string;
@@ -47,22 +55,28 @@ const AdminProducts = () => {
     defaultValues: {
       name: '',
       description: '',
-      price: '',
-      period: '/bulan',
+      monthlyPrice: '',
+      quarterlyPrice: '',
+      semiAnnualPrice: '',
+      yearlyPrice: '',
       image: '',
       features: '',
       demoUrl: ''
     }
   });
 
-  // Mock data - in real app this would come from Supabase
+  // Mock data with new pricing structure
   const mockProducts: Product[] = [
     {
       id: 1,
       name: "Paket Basic",
       description: "Paket langganan dasar dengan fitur lengkap untuk bisnis kecil",
-      price: "Rp 99.000",
-      period: "/bulan",
+      pricing: {
+        monthly: "Rp 99.000",
+        quarterly: "Rp 270.000",
+        semiAnnual: "Rp 510.000",
+        yearly: "Rp 990.000"
+      },
       image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?ixlib=rb-4.0.3",
       features: ["5 User", "10GB Storage", "Email Support", "Basic Analytics"],
       demoUrl: "https://demo.example.com/basic"
@@ -71,8 +85,12 @@ const AdminProducts = () => {
       id: 2,
       name: "Paket Professional",
       description: "Paket untuk bisnis menengah dengan fitur advanced",
-      price: "Rp 199.000",
-      period: "/bulan",
+      pricing: {
+        monthly: "Rp 199.000",
+        quarterly: "Rp 540.000",
+        semiAnnual: "Rp 1.020.000",
+        yearly: "Rp 1.980.000"
+      },
       image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3",
       features: ["25 User", "100GB Storage", "Priority Support", "Advanced Analytics", "API Access"],
       demoUrl: "https://demo.example.com/professional"
@@ -81,8 +99,12 @@ const AdminProducts = () => {
       id: 3,
       name: "Paket Enterprise",
       description: "Solusi lengkap untuk perusahaan besar",
-      price: "Rp 499.000",
-      period: "/bulan",
+      pricing: {
+        monthly: "Rp 499.000",
+        quarterly: "Rp 1.350.000",
+        semiAnnual: "Rp 2.550.000",
+        yearly: "Rp 4.950.000"
+      },
       image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3",
       features: ["Unlimited User", "1TB Storage", "24/7 Support", "Custom Analytics", "Full API", "Dedicated Manager"],
       demoUrl: "https://demo.example.com/enterprise"
@@ -91,7 +113,6 @@ const AdminProducts = () => {
 
   useEffect(() => {
     if (!roleLoading && isAdmin) {
-      // In real app, fetch from Supabase
       setProducts(mockProducts);
     }
   }, [isAdmin, roleLoading]);
@@ -105,8 +126,17 @@ const AdminProducts = () => {
         // Update existing product
         const updatedProduct: Product = {
           ...editingProduct,
-          ...data,
-          features: featuresArray
+          name: data.name,
+          description: data.description,
+          pricing: {
+            monthly: data.monthlyPrice,
+            quarterly: data.quarterlyPrice,
+            semiAnnual: data.semiAnnualPrice,
+            yearly: data.yearlyPrice
+          },
+          image: data.image,
+          features: featuresArray,
+          demoUrl: data.demoUrl
         };
         
         setProducts(prev => prev.map(p => p.id === editingProduct.id ? updatedProduct : p));
@@ -118,8 +148,17 @@ const AdminProducts = () => {
         // Add new product
         const newProduct: Product = {
           id: Date.now(),
-          ...data,
-          features: featuresArray
+          name: data.name,
+          description: data.description,
+          pricing: {
+            monthly: data.monthlyPrice,
+            quarterly: data.quarterlyPrice,
+            semiAnnual: data.semiAnnualPrice,
+            yearly: data.yearlyPrice
+          },
+          image: data.image,
+          features: featuresArray,
+          demoUrl: data.demoUrl
         };
         
         setProducts(prev => [...prev, newProduct]);
@@ -148,8 +187,10 @@ const AdminProducts = () => {
     form.reset({
       name: product.name,
       description: product.description,
-      price: product.price,
-      period: product.period,
+      monthlyPrice: product.pricing.monthly,
+      quarterlyPrice: product.pricing.quarterly,
+      semiAnnualPrice: product.pricing.semiAnnual,
+      yearlyPrice: product.pricing.yearly,
       image: product.image,
       features: product.features.join(', '),
       demoUrl: product.demoUrl
@@ -213,7 +254,7 @@ const AdminProducts = () => {
               Tambah Produk
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}
@@ -250,34 +291,66 @@ const AdminProducts = () => {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Harga</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Rp 99.000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Harga Berdasarkan Periode</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="monthlyPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Harga Bulanan</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rp 99.000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="period"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Periode</FormLabel>
-                        <FormControl>
-                          <Input placeholder="/bulan" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="quarterlyPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Harga 3 Bulan</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rp 270.000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="semiAnnualPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Harga 6 Bulan</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rp 510.000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="yearlyPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Harga Tahunan</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rp 990.000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <FormField
@@ -373,8 +446,20 @@ const AdminProducts = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-bold">{product.price}</span>
-                    <span className="text-gray-500">{product.period}</span>
+                    <div className="space-y-1">
+                      <div className="text-sm">
+                        <span className="font-semibold">Bulanan:</span> {product.pricing.monthly}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold">3 Bulan:</span> {product.pricing.quarterly}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold">6 Bulan:</span> {product.pricing.semiAnnual}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold">Tahunan:</span> {product.pricing.yearly}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

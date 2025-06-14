@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
-  const { collapsed } = useSidebar()
+  const { state } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
   const { signOut } = useAuth()
@@ -48,16 +48,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={collapsed ? "w-14" : "w-60"}
+      className={state === "collapsed" ? "w-14" : "w-60"}
       collapsible="offcanvas"
     >
       <SidebarTrigger className="m-2 self-end" />
 
       <SidebarContent>
-        <SidebarGroup
-          open={isExpanded}
-          onOpenChange={() => {}}
-        >
+        <SidebarGroup>
           <SidebarGroupLabel>Menu Utama</SidebarGroupLabel>
 
           <SidebarGroupContent>
@@ -67,7 +64,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
                       <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {state !== "collapsed" && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -82,7 +79,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                   <LogOut className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>Keluar</span>}
+                  {state !== "collapsed" && <span>Keluar</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
