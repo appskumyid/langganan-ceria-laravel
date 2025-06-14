@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import type { VariantProps } from 'class-variance-authority';
+import { Link } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,10 +188,19 @@ const AdminSubscriptions = () => {
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => handleOpenEdit(sub)}>
-                      <Edit className="h-4 w-4 md:mr-2" />
-                      <span className="hidden md:inline">Detail</span>
-                    </Button>
+                    {sub.subscription_status === 'active' ? (
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/admin/subscription/${sub.id}`}>
+                          <Edit className="h-4 w-4 md:mr-2" />
+                          <span className="hidden md:inline">Detail</span>
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => handleOpenEdit(sub)}>
+                        <Edit className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Detail</span>
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
