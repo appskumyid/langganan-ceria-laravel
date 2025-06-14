@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ type ProductCsvRow = Omit<Tables<'store_products'>, 'id' | 'created_at' | 'updat
 interface CsvUploadDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onUpload: (products: ProductCsvRow[]) => Promise<void>;
+  onUpload: (products: ProductCsvRow[]) => Promise<any>;
   isUploading: boolean;
 }
 
