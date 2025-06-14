@@ -8,6 +8,7 @@ import Homepage from "./pages/Homepage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminProducts from "./pages/AdminProducts";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -39,6 +40,16 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/products" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminProducts />
                 </Layout>
               </ProtectedRoute>
             } 
