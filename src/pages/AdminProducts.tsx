@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,6 +26,7 @@ interface Product {
   id: number;
   name: string;
   description: string;
+  category: string;
   pricing: PricingPeriod;
   image: string;
   features: string[];
@@ -34,6 +36,7 @@ interface Product {
 interface ProductFormData {
   name: string;
   description: string;
+  category: string;
   monthlyPrice: string;
   quarterlyPrice: string;
   semiAnnualPrice: string;
@@ -42,6 +45,14 @@ interface ProductFormData {
   features: string;
   demoUrl: string;
 }
+
+const categories = [
+  'E-Commerce',
+  'Company Profile',
+  'CV / Portfolio',
+  'Undangan Digital',
+  'Aplikasi Bisnis (ERP, POS, LMS, dll)'
+];
 
 const AdminProducts = () => {
   const { isAdmin, loading: roleLoading } = useUserRole();
@@ -55,6 +66,7 @@ const AdminProducts = () => {
     defaultValues: {
       name: '',
       description: '',
+      category: '',
       monthlyPrice: '',
       quarterlyPrice: '',
       semiAnnualPrice: '',
@@ -65,12 +77,13 @@ const AdminProducts = () => {
     }
   });
 
-  // Mock data with new pricing structure
+  // Mock data with new pricing structure and categories
   const mockProducts: Product[] = [
     {
       id: 1,
       name: "Paket Basic",
       description: "Paket langganan dasar dengan fitur lengkap untuk bisnis kecil",
+      category: "E-Commerce",
       pricing: {
         monthly: "Rp 99.000",
         quarterly: "Rp 270.000",
@@ -85,6 +98,7 @@ const AdminProducts = () => {
       id: 2,
       name: "Paket Professional",
       description: "Paket untuk bisnis menengah dengan fitur advanced",
+      category: "Company Profile",
       pricing: {
         monthly: "Rp 199.000",
         quarterly: "Rp 540.000",
@@ -99,6 +113,7 @@ const AdminProducts = () => {
       id: 3,
       name: "Paket Enterprise",
       description: "Solusi lengkap untuk perusahaan besar",
+      category: "Aplikasi Bisnis (ERP, POS, LMS, dll)",
       pricing: {
         monthly: "Rp 499.000",
         quarterly: "Rp 1.350.000",
@@ -128,6 +143,7 @@ const AdminProducts = () => {
           ...editingProduct,
           name: data.name,
           description: data.description,
+          category: data.category,
           pricing: {
             monthly: data.monthlyPrice,
             quarterly: data.quarterlyPrice,
@@ -150,6 +166,7 @@ const AdminProducts = () => {
           id: Date.now(),
           name: data.name,
           description: data.description,
+          category: data.category,
           pricing: {
             monthly: data.monthlyPrice,
             quarterly: data.quarterlyPrice,
@@ -187,6 +204,7 @@ const AdminProducts = () => {
     form.reset({
       name: product.name,
       description: product.description,
+      category: product.category,
       monthlyPrice: product.pricing.monthly,
       quarterlyPrice: product.pricing.quarterly,
       semiAnnualPrice: product.pricing.semiAnnual,
@@ -286,6 +304,31 @@ const AdminProducts = () => {
                       <FormControl>
                         <Textarea placeholder="Masukkan deskripsi produk" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kategori</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih kategori produk" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -424,6 +467,7 @@ const AdminProducts = () => {
               <TableRow>
                 <TableHead>Gambar</TableHead>
                 <TableHead>Nama Produk</TableHead>
+                <TableHead>Kategori</TableHead>
                 <TableHead>Harga</TableHead>
                 <TableHead>Fitur</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -444,6 +488,9 @@ const AdminProducts = () => {
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-gray-500">{product.description}</p>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{product.category}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
