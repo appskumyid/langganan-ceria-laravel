@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,9 @@ const App = () => (
             path="/" 
             element={
               <ProtectedRoute>
-                <Index />
+                <Layout>
+                  <Index />
+                </Layout>
               </ProtectedRoute>
             } 
           />
@@ -32,7 +35,9 @@ const App = () => (
             path="/admin" 
             element={
               <ProtectedRoute>
-                <AdminDashboard />
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
               </ProtectedRoute>
             } 
           />
