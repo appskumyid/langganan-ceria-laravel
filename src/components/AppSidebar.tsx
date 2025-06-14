@@ -1,6 +1,5 @@
-
 import { useState } from "react"
-import { Home, Users, Package, Settings, LogOut } from "lucide-react"
+import { Home, Users, Package, Settings, LogOut, ListChecks } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserRole } from "@/hooks/useUserRole"
@@ -27,10 +26,12 @@ export function AppSidebar() {
 
   const memberItems = [
     { title: "Dashboard", url: "/", icon: Home },
+    { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
   ]
 
   const adminItems = [
     { title: "Dashboard", url: "/", icon: Home },
+    { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
     { title: "Admin Dashboard", url: "/admin", icon: Users },
     { title: "Kelola Produk", url: "/admin/products", icon: Package },
   ]

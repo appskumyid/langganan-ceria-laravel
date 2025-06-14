@@ -33,6 +33,97 @@ export type Database = {
         }
         Relationships: []
       }
+      store_details: {
+        Row: {
+          about_store: string | null
+          created_at: string
+          id: string
+          location: string | null
+          phone_number: string | null
+          store_address: string | null
+          store_name: string | null
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+        }
+        Insert: {
+          about_store?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          phone_number?: string | null
+          store_address?: string | null
+          store_name?: string | null
+          updated_at?: string
+          user_id: string
+          user_subscription_id: string
+        }
+        Update: {
+          about_store?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          phone_number?: string | null
+          store_address?: string | null
+          store_name?: string | null
+          updated_at?: string
+          user_id?: string
+          user_subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_details_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: true
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          store_details_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          store_details_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          store_details_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_products_store_details_id_fkey"
+            columns: ["store_details_id"]
+            isOneToOne: false
+            referencedRelation: "store_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -50,6 +141,66 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          expires_at: string | null
+          id: string
+          payment_method_selected: string | null
+          product_category: string
+          product_name: string
+          product_period: string
+          product_price: string
+          product_static_id: number
+          product_type: string
+          subscribed_at: string
+          subscription_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          expires_at?: string | null
+          id?: string
+          payment_method_selected?: string | null
+          product_category: string
+          product_name: string
+          product_period: string
+          product_price: string
+          product_static_id: number
+          product_type: string
+          subscribed_at?: string
+          subscription_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          expires_at?: string | null
+          id?: string
+          payment_method_selected?: string | null
+          product_category?: string
+          product_name?: string
+          product_period?: string
+          product_price?: string
+          product_static_id?: number
+          product_type?: string
+          subscribed_at?: string
+          subscription_status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
