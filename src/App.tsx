@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Homepage from "./pages/Homepage";
 import Products from "./pages/Products";
 import Services from "./pages/Services";
+import Payment from "./pages/Payment";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/home" element={<Homepage />} />
           <Route path="/products" element={<Products />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/payment" element={<Payment />} />
           <Route path="/auth" element={<Auth />} />
           <Route 
             path="/" 

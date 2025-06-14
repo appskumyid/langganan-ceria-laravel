@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, MessageCircle, Play, Crown, Search } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import CheckoutDialog from "@/components/CheckoutDialog";
 
 interface Product {
   id: number;
@@ -133,9 +133,13 @@ const categories = [
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubscribe = (productName: string) => {
-    console.log(`Subscribe to ${productName}`);
+  const handleSubscribe = (product: Product) => {
+    setSelectedProduct(product);
+    setIsCheckoutOpen(true);
   };
 
   const handleDemo = (demoUrl: string) => {
@@ -202,7 +206,7 @@ const Products = () => {
         <div className="space-y-2">
           <Button 
             className="w-full" 
-            onClick={() => handleSubscribe(product.name)}
+            onClick={() => handleSubscribe(product)}
           >
             Add Subscribe
           </Button>
@@ -353,6 +357,20 @@ const Products = () => {
           </div>
         </div>
       </footer>
+
+      {/* Checkout Dialog */}
+      {selectedProduct && (
+        <CheckoutDialog
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          product={{
+            id: selectedProduct.id,
+            name: selectedProduct.name,
+            price: selectedProduct.price,
+            period: selectedProduct.period
+          }}
+        />
+      )}
     </div>
   );
 };
