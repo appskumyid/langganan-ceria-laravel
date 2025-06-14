@@ -224,6 +224,48 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          demo_url: string | null
+          description: string | null
+          features: string[] | null
+          id: number
+          image_url: string | null
+          name: string
+          period: string
+          price: string
+          type: Database["public"]["Enums"]["product_type_enum"]
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: number
+          image_url?: string | null
+          name: string
+          period: string
+          price: string
+          type: Database["public"]["Enums"]["product_type_enum"]
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: number
+          image_url?: string | null
+          name?: string
+          period?: string
+          price?: string
+          type?: Database["public"]["Enums"]["product_type_enum"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -491,6 +533,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      product_type_enum: "Premium" | "Non-Premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -607,6 +650,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      product_type_enum: ["Premium", "Non-Premium"],
     },
   },
 } as const

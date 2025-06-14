@@ -1,127 +1,32 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, MessageCircle, Play, Crown, Search, LogOut } from "lucide-react";
+import { Eye, MessageCircle, Play, Crown, Search, LogOut, Loader2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import CheckoutDialog from "@/components/CheckoutDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  type: "Premium" | "Non-Premium";
-  category: string;
-  price: string;
-  period: string;
-  image: string;
-  features: string[];
-  demoUrl: string;
-}
+type Product = Tables<'products'>;
 
-const productsData: Product[] = [
-  // E-Commerce
-  {
-    id: 1,
-    name: "Toko Online Basic",
-    description: "Platform e-commerce sederhana untuk bisnis kecil",
-    type: "Non-Premium",
-    category: "E-Commerce",
-    price: "Rp 199.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Katalog Produk", "Keranjang Belanja", "Payment Gateway", "Dashboard Admin"],
-    demoUrl: "https://demo.example.com/ecommerce-basic"
-  },
-  {
-    id: 2,
-    name: "Toko Online Premium",
-    description: "E-commerce lengkap dengan fitur advanced dan analitik",
-    type: "Premium",
-    category: "E-Commerce",
-    price: "Rp 599.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Multi-vendor", "Advanced Analytics", "SEO Tools", "Multi-payment", "Mobile App"],
-    demoUrl: "https://demo.example.com/ecommerce-premium"
-  },
-  {
-    id: 3,
-    name: "Company Profile Standard",
-    description: "Website profil perusahaan yang profesional",
-    type: "Non-Premium",
-    category: "Company Profile",
-    price: "Rp 99.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Responsive Design", "Company Info", "Contact Form", "Gallery"],
-    demoUrl: "https://demo.example.com/company-basic"
-  },
-  {
-    id: 4,
-    name: "Company Profile Premium",
-    description: "Website perusahaan dengan fitur lengkap dan animasi",
-    type: "Premium",
-    category: "Company Profile",
-    price: "Rp 299.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Custom Animation", "Blog System", "Team Management", "Newsletter", "SEO Optimized"],
-    demoUrl: "https://demo.example.com/company-premium"
-  },
-  {
-    id: 5,
-    name: "Portfolio Personal",
-    description: "Website portfolio untuk freelancer dan profesional",
-    type: "Non-Premium",
-    category: "CV / Portfolio",
-    price: "Rp 79.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Portfolio Gallery", "CV Online", "Contact Form", "Skills Section"],
-    demoUrl: "https://demo.example.com/portfolio-basic"
-  },
-  {
-    id: 6,
-    name: "Undangan Digital Premium",
-    description: "Undangan pernikahan digital yang elegan dan interaktif",
-    type: "Premium",
-    category: "Undangan Digital",
-    price: "Rp 149.000",
-    period: "/sekali",
-    image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Custom Design", "RSVP Online", "Gallery Photo", "Music Background", "Guest Book"],
-    demoUrl: "https://demo.example.com/invitation"
-  },
-  {
-    id: 7,
-    name: "POS System Basic",
-    description: "Sistem Point of Sale untuk retail dan restoran",
-    type: "Non-Premium",
-    category: "Aplikasi Bisnis (ERP, POS, LMS, dll)",
-    price: "Rp 399.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["Inventory Management", "Sales Reporting", "Barcode Scanner", "Multi-user"],
-    demoUrl: "https://demo.example.com/pos-basic"
-  },
-  {
-    id: 8,
-    name: "ERP Enterprise",
-    description: "Sistem ERP lengkap untuk perusahaan besar",
-    type: "Premium",
-    category: "Aplikasi Bisnis (ERP, POS, LMS, dll)",
-    price: "Rp 1.999.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80",
-    features: ["HR Management", "Finance Module", "CRM Integration", "Custom Reports", "API Access"],
-    demoUrl: "https://demo.example.com/erp-enterprise"
+const fetchProducts = async (): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
   }
-];
+  return data || [];
+};
 
 const categories = [
   "All",
@@ -140,6 +45,11 @@ const Products = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { data: productsData = [], isLoading, isError, error: queryError } = useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  });
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -171,8 +81,10 @@ const Products = () => {
     setIsCheckoutOpen(true);
   };
 
-  const handleDemo = (demoUrl: string) => {
-    window.open(demoUrl, '_blank');
+  const handleDemo = (demoUrl: string | null) => {
+    if (demoUrl) {
+      window.open(demoUrl, '_blank');
+    }
   };
 
   const handleDetail = (productId: number) => {
@@ -187,7 +99,7 @@ const Products = () => {
 
   const filteredProducts = productsData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = activeCategory === "All" || product.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -197,7 +109,7 @@ const Products = () => {
       <CardHeader className="p-0">
         <div className="relative">
           <img
-            src={product.image}
+            src={product.image_url || '/placeholder.svg'}
             alt={product.name}
             className="w-full h-48 object-cover rounded-t-lg"
           />
@@ -214,7 +126,7 @@ const Products = () => {
       </CardHeader>
       <CardContent className="p-6">
         <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
-        <p className="text-gray-600 mb-4">{product.description}</p>
+        <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
         
         <div className="mb-4">
           <span className="text-2xl font-bold text-primary">{product.price}</span>
@@ -224,7 +136,7 @@ const Products = () => {
         <div className="mb-4">
           <h4 className="font-semibold mb-2">Fitur:</h4>
           <div className="flex flex-wrap gap-1">
-            {product.features.map((feature, index) => (
+            {product.features?.map((feature, index) => (
               <Badge key={index} variant="outline" className="text-xs">
                 {feature}
               </Badge>
@@ -244,7 +156,8 @@ const Products = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => handleDemo(product.demoUrl)}
+              onClick={() => handleDemo(product.demo_url)}
+              disabled={!product.demo_url}
               className="flex items-center gap-1"
             >
               <Play className="h-3 w-3" />
@@ -376,20 +289,43 @@ const Products = () => {
 
           {categories.map((category) => (
             <TabsContent key={category} value={category}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-12">
-                    <p className="text-gray-500 text-lg">
-                      Tidak ada produk yang ditemukan untuk kategori "{activeCategory}" 
-                      {searchTerm && ` dengan kata kunci "${searchTerm}"`}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {isLoading && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i}>
+                      <Skeleton className="w-full h-48 rounded-t-lg" />
+                      <CardContent className="p-6 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-8 w-1/2" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              {isError && (
+                <div className="col-span-full text-center py-12 text-red-500">
+                  <p className="text-lg">Gagal memuat produk.</p>
+                  <p className="text-sm">{queryError?.message}</p>
+                </div>
+              )}
+              {!isLoading && !isError && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-12">
+                      <p className="text-gray-500 text-lg">
+                        Tidak ada produk yang ditemukan untuk kategori "{activeCategory}" 
+                        {searchTerm && ` dengan kata kunci "${searchTerm}"`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
           ))}
         </Tabs>
