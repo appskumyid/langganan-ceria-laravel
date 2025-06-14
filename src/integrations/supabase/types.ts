@@ -9,6 +9,215 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      company_profiles: {
+        Row: {
+          about: string
+          address: string
+          company_name: string
+          created_at: string
+          facebook_url: string | null
+          id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          phone_number: string
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          youtube_url: string | null
+        }
+        Insert: {
+          about: string
+          address: string
+          company_name: string
+          created_at?: string
+          facebook_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone_number: string
+          updated_at?: string
+          user_id: string
+          user_subscription_id: string
+          youtube_url?: string | null
+        }
+        Update: {
+          about?: string
+          address?: string
+          company_name?: string
+          created_at?: string
+          facebook_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone_number?: string
+          updated_at?: string
+          user_id?: string
+          user_subscription_id?: string
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_profiles_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: true
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_services: {
+        Row: {
+          company_profile_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_profile_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_profile_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_services_company_profile_id_fkey"
+            columns: ["company_profile_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_portfolios: {
+        Row: {
+          address: string
+          created_at: string
+          facebook_url: string | null
+          full_name: string
+          id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          phone_number: string
+          skills: string | null
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          youtube_url: string | null
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          facebook_url?: string | null
+          full_name: string
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone_number: string
+          skills?: string | null
+          updated_at?: string
+          user_id: string
+          user_subscription_id: string
+          youtube_url?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          facebook_url?: string | null
+          full_name?: string
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone_number?: string
+          skills?: string | null
+          updated_at?: string
+          user_id?: string
+          user_subscription_id?: string
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_portfolios_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: true
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_invitations: {
+        Row: {
+          bride_name: string
+          ceremony_date: string
+          ceremony_location: string
+          ceremony_time: string
+          created_at: string
+          groom_name: string
+          id: string
+          reception_date: string | null
+          reception_location: string | null
+          reception_time: string | null
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+        }
+        Insert: {
+          bride_name: string
+          ceremony_date: string
+          ceremony_location: string
+          ceremony_time: string
+          created_at?: string
+          groom_name: string
+          id?: string
+          reception_date?: string | null
+          reception_location?: string | null
+          reception_time?: string | null
+          updated_at?: string
+          user_id: string
+          user_subscription_id: string
+        }
+        Update: {
+          bride_name?: string
+          ceremony_date?: string
+          ceremony_location?: string
+          ceremony_time?: string
+          created_at?: string
+          groom_name?: string
+          id?: string
+          reception_date?: string | null
+          reception_location?: string | null
+          reception_time?: string | null
+          updated_at?: string
+          user_id?: string
+          user_subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_invitations_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: true
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -37,7 +246,10 @@ export type Database = {
         Row: {
           about_store: string | null
           created_at: string
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
+          linkedin_url: string | null
           location: string | null
           phone_number: string | null
           store_address: string | null
@@ -45,11 +257,15 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          youtube_url: string | null
         }
         Insert: {
           about_store?: string | null
           created_at?: string
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
           location?: string | null
           phone_number?: string | null
           store_address?: string | null
@@ -57,11 +273,15 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_subscription_id: string
+          youtube_url?: string | null
         }
         Update: {
           about_store?: string | null
           created_at?: string
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
           location?: string | null
           phone_number?: string | null
           store_address?: string | null
@@ -69,6 +289,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_subscription_id?: string
+          youtube_url?: string | null
         }
         Relationships: [
           {
@@ -204,6 +425,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      work_experiences: {
+        Row: {
+          company_name: string
+          created_at: string
+          cv_portfolio_id: string
+          id: string
+          job_description: string | null
+          job_period: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          cv_portfolio_id: string
+          id?: string
+          job_description?: string | null
+          job_period: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          cv_portfolio_id?: string
+          id?: string
+          job_description?: string | null
+          job_period?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_experiences_cv_portfolio_id_fkey"
+            columns: ["cv_portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "cv_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

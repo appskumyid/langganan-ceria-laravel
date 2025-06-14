@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2 } from 'lucide-react';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
+import SubscriptionManagementForms from '@/components/SubscriptionManagementForms';
 
 const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
   switch (status) {
@@ -102,6 +103,8 @@ const SubscriptionDetail = () => {
           </div>
         </CardContent>
       </Card>
+
+      <SubscriptionManagementForms subscription={subscription} />
     </div>
   );
 };
