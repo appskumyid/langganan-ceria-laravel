@@ -19,6 +19,8 @@ export type Database = {
           id: string
           instagram_url: string | null
           linkedin_url: string | null
+          maps_url: string | null
+          office_phone_number: string | null
           phone_number: string
           updated_at: string
           user_id: string
@@ -34,6 +36,8 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           linkedin_url?: string | null
+          maps_url?: string | null
+          office_phone_number?: string | null
           phone_number: string
           updated_at?: string
           user_id: string
@@ -49,6 +53,8 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           linkedin_url?: string | null
+          maps_url?: string | null
+          office_phone_number?: string | null
           phone_number?: string
           updated_at?: string
           user_id?: string

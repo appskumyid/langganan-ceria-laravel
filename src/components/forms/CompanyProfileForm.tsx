@@ -19,8 +19,12 @@ import CompanyServiceManager from './company-profile/CompanyServiceManager';
 const profileFormSchema = z.object({
   company_name: z.string().min(1, 'Nama perusahaan harus diisi.'),
   about: z.string().min(1, 'Tentang perusahaan harus diisi.'),
-  phone_number: z.string().min(1, 'Nomor telepon harus diisi.'),
+  phone_number: z.string()
+    .min(1, 'Nomor HP harus diisi.')
+    .startsWith('62', 'Nomor HP harus diawali dengan 62.'),
+  office_phone_number: z.string().optional(),
   address: z.string().min(1, 'Alamat harus diisi.'),
+  maps_url: z.string().url({ message: "URL tidak valid." }).or(z.literal('')).optional(),
   instagram_url: z.string().url({ message: "URL tidak valid." }).or(z.literal('')).optional(),
   youtube_url: z.string().url({ message: "URL tidak valid." }).or(z.literal('')).optional(),
   facebook_url: z.string().url({ message: "URL tidak valid." }).or(z.literal('')).optional(),
@@ -62,7 +66,9 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
       company_name: '',
       about: '',
       phone_number: '',
+      office_phone_number: '',
       address: '',
+      maps_url: '',
       instagram_url: '',
       youtube_url: '',
       facebook_url: '',
@@ -76,7 +82,9 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
         company_name: profileData.company_name || '',
         about: profileData.about || '',
         phone_number: profileData.phone_number || '',
+        office_phone_number: profileData.office_phone_number || '',
         address: profileData.address || '',
+        maps_url: profileData.maps_url || '',
         instagram_url: profileData.instagram_url || '',
         youtube_url: profileData.youtube_url || '',
         facebook_url: profileData.facebook_url || '',
@@ -87,7 +95,9 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
             company_name: '',
             about: '',
             phone_number: '',
+            office_phone_number: '',
             address: '',
+            maps_url: '',
             instagram_url: '',
             youtube_url: '',
             facebook_url: '',
@@ -104,12 +114,21 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
         id: profileData?.id,
         user_subscription_id: subscription.id,
         user_id: user.id,
-        ...values,
+        company_name: values.company_name,
+        about: values.about,
+        phone_number: values.phone_number,
+        address: values.address,
+        office_phone_number: values.office_phone_number || null,
+        maps_url: values.maps_url || null,
+        instagram_url: values.instagram_url || null,
+        youtube_url: values.youtube_url || null,
+        facebook_url: values.facebook_url || null,
+        linkedin_url: values.linkedin_url || null,
       };
 
       const { error } = await supabase.from('company_profiles').upsert(upsertData, {
         onConflict: 'user_subscription_id',
-      });
+      }).select();
       
       if (error) throw error;
     },
@@ -142,7 +161,6 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
     <div className="space-y-8">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                     control={form.control}
                     name="company_name"
@@ -154,18 +172,6 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
                     </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="phone_number"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Nomor Telepon</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                </div>
                 
                 <FormField
                 control={form.control}
@@ -178,6 +184,32 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
                     </FormItem>
                 )}
                 />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="phone_number"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nomor HP (WhatsApp)</FormLabel>
+                            <FormControl><Input placeholder="6281234567890" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="office_phone_number"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nomor Telepon Kantor (Opsional)</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+                
                 <FormField
                 control={form.control}
                 name="address"
@@ -188,6 +220,18 @@ const CompanyProfileForm = ({ subscription }: CompanyProfileFormProps) => {
                     <FormMessage />
                     </FormItem>
                 )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="maps_url"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Titik Google Maps (URL)</FormLabel>
+                        <FormControl><Input placeholder="https://maps.app.goo.gl/..." {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
                 />
 
                 <Card>
