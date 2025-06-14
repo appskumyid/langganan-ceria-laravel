@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import AdminSubscriptions from '@/components/AdminSubscriptions';
 
 interface UserRole {
   role: string;
@@ -93,8 +94,8 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="mb-6">
+    <div className="space-y-8">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Dashboard Admin
         </h1>
@@ -103,7 +104,7 @@ const AdminDashboard = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -193,6 +194,16 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Kelola Langganan Pengguna</CardTitle>
+          <p className="text-sm text-muted-foreground pt-1">Setujui pembayaran yang menunggu konfirmasi.</p>
+        </CardHeader>
+        <CardContent>
+          <AdminSubscriptions />
         </CardContent>
       </Card>
     </div>

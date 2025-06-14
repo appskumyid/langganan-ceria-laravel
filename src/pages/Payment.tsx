@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +35,7 @@ const Payment = () => {
   
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("bank_transfer");
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const { data: subscription, isLoading, error: queryError } = useQuery({
     queryKey: ['subscriptionDetails', subscriptionId],
@@ -65,12 +65,32 @@ const Payment = () => {
     toast({ title: "Berhasil Disalin", description: "Nomor rekening telah disalin ke clipboard." });
   };
 
-  const handleConfirmPayment = () => {
-    toast({
-      title: "Konfirmasi Pembayaran Terkirim",
-      description: "Fitur ini masih dalam pengembangan. Status langganan Anda akan segera diperbarui.",
-    });
-    navigate("/my-subscriptions");
+  const handleConfirmPayment = async () => {
+    if (!subscription) return;
+    setIsConfirming(true);
+
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({ subscription_status: 'waiting_confirmation' })
+        .eq('id', subscription.id);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Konfirmasi Terkirim",
+        description: "Pembayaran Anda sedang kami verifikasi. Status akan segera diperbarui.",
+      });
+      navigate("/my-subscriptions");
+    } catch (error: any) {
+       toast({
+        title: "Gagal Mengkonfirmasi",
+        description: error.message || "Terjadi kesalahan. Silakan coba lagi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   if (isLoading) {
@@ -186,7 +206,8 @@ const Payment = () => {
               </Card>
             )}
 
-            <Button onClick={handleConfirmPayment} className="w-full" disabled={timeLeft === 0}>
+            <Button onClick={handleConfirmPayment} className="w-full" disabled={timeLeft === 0 || isConfirming}>
+              {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Saya Sudah Membayar
             </Button>
           </div>

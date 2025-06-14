@@ -1,22 +1,25 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
+import type { VariantProps } from "class-variance-authority";
 
 interface SubscribedProductCardProps {
   subscription: Tables<'user_subscriptions'>;
 }
 
 const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => {
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
       case 'active':
         return 'success';
       case 'pending_payment':
         return 'warning';
+      case 'waiting_confirmation':
+        return 'info';
       case 'expired':
         return 'destructive';
       case 'cancelled':
@@ -37,8 +40,8 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
       <CardContent className="space-y-4">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Status Langganan:</span>
-          <Badge variant={getStatusVariant(subscription.subscription_status) as any}>
-            {subscription.subscription_status.replace('_', ' ').toUpperCase()}
+          <Badge variant={getStatusVariant(subscription.subscription_status)}>
+            {subscription.subscription_status.replace(/_/g, ' ').toUpperCase()}
           </Badge>
         </div>
         <div className="flex justify-between items-center">
@@ -61,6 +64,11 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
             <Link to={`/payment/${subscription.id}`}>
               Selesaikan Pembayaran <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
+          </Button>
+        ) : subscription.subscription_status === 'waiting_confirmation' ? (
+          <Button variant="outline" className="w-full" disabled>
+            <Clock className="mr-2 h-4 w-4" />
+            Menunggu Konfirmasi
           </Button>
         ) : (
           <>
