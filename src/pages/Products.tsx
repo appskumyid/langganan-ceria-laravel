@@ -1,8 +1,11 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MessageCircle, Play, Crown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, MessageCircle, Play, Crown, Search } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 interface Product {
@@ -44,7 +47,6 @@ const productsData: Product[] = [
     features: ["Multi-vendor", "Advanced Analytics", "SEO Tools", "Multi-payment", "Mobile App"],
     demoUrl: "https://demo.example.com/ecommerce-premium"
   },
-  // Company Profile
   {
     id: 3,
     name: "Company Profile Standard",
@@ -69,7 +71,6 @@ const productsData: Product[] = [
     features: ["Custom Animation", "Blog System", "Team Management", "Newsletter", "SEO Optimized"],
     demoUrl: "https://demo.example.com/company-premium"
   },
-  // CV / Portfolio
   {
     id: 5,
     name: "Portfolio Personal",
@@ -82,7 +83,6 @@ const productsData: Product[] = [
     features: ["Portfolio Gallery", "CV Online", "Contact Form", "Skills Section"],
     demoUrl: "https://demo.example.com/portfolio-basic"
   },
-  // Undangan Digital
   {
     id: 6,
     name: "Undangan Digital Premium",
@@ -95,7 +95,6 @@ const productsData: Product[] = [
     features: ["Custom Design", "RSVP Online", "Gallery Photo", "Music Background", "Guest Book"],
     demoUrl: "https://demo.example.com/invitation"
   },
-  // Aplikasi Bisnis
   {
     id: 7,
     name: "POS System Basic",
@@ -123,6 +122,7 @@ const productsData: Product[] = [
 ];
 
 const categories = [
+  "All",
   "E-Commerce",
   "Company Profile", 
   "CV / Portfolio",
@@ -131,6 +131,9 @@ const categories = [
 ];
 
 const Products = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+
   const handleSubscribe = (productName: string) => {
     console.log(`Subscribe to ${productName}`);
   };
@@ -148,6 +151,97 @@ const Products = () => {
     const whatsappUrl = `https://wa.me/6287886425562?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
+
+  const filteredProducts = productsData.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = activeCategory === "All" || product.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const ProductCard = ({ product }: { product: Product }) => (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="p-0">
+        <div className="relative">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-48 object-cover rounded-t-lg"
+          />
+          <div className="absolute top-4 right-4 flex gap-2">
+            <Badge 
+              variant={product.type === "Premium" ? "default" : "secondary"}
+              className={product.type === "Premium" ? "bg-yellow-500 text-white" : ""}
+            >
+              {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
+              {product.type}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6">
+        <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
+        <p className="text-gray-600 mb-4">{product.description}</p>
+        
+        <div className="mb-4">
+          <span className="text-2xl font-bold text-primary">{product.price}</span>
+          <span className="text-gray-500">{product.period}</span>
+        </div>
+
+        <div className="mb-4">
+          <h4 className="font-semibold mb-2">Fitur:</h4>
+          <div className="flex flex-wrap gap-1">
+            {product.features.map((feature, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {feature}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Button 
+            className="w-full" 
+            onClick={() => handleSubscribe(product.name)}
+          >
+            Add Subscribe
+          </Button>
+          
+          <div className="grid grid-cols-3 gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleDemo(product.demoUrl)}
+              className="flex items-center gap-1"
+            >
+              <Play className="h-3 w-3" />
+              Demo
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleDetail(product.id)}
+              className="flex items-center gap-1"
+            >
+              <Eye className="h-3 w-3" />
+              Detail
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleWhatsApp(product.name)}
+              className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
+            >
+              <MessageCircle className="h-3 w-3" />
+              WA
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -205,112 +299,50 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Products by Category */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {categories.map((category) => {
-          const categoryProducts = productsData.filter(product => product.category === category);
-          
-          if (categoryProducts.length === 0) return null;
+      {/* Search and Filter Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <div className="relative max-w-md mx-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Cari produk..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
 
-          return (
-            <section key={category} className="mb-16">
-              <div className="mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  {category}
-                </h2>
-                <p className="text-gray-600">
-                  Solusi terbaik untuk kategori {category.toLowerCase()}
-                </p>
-              </div>
-              
+        {/* Category Tabs */}
+        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-8">
+            {categories.map((category) => (
+              <TabsTrigger key={category} value={category} className="text-xs md:text-sm">
+                {category === "Aplikasi Bisnis (ERP, POS, LMS, dll)" ? "Aplikasi Bisnis" : category}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {categories.map((category) => (
+            <TabsContent key={category} value={category}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {categoryProducts.map((product) => (
-                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="p-0">
-                      <div className="relative">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-48 object-cover rounded-t-lg"
-                        />
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          <Badge 
-                            variant={product.type === "Premium" ? "default" : "secondary"}
-                            className={product.type === "Premium" ? "bg-yellow-500 text-white" : ""}
-                          >
-                            {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
-                            {product.type}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
-                      <p className="text-gray-600 mb-4">{product.description}</p>
-                      
-                      <div className="mb-4">
-                        <span className="text-2xl font-bold text-primary">{product.price}</span>
-                        <span className="text-gray-500">{product.period}</span>
-                      </div>
-
-                      <div className="mb-4">
-                        <h4 className="font-semibold mb-2">Fitur:</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {product.features.map((feature, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {feature}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Button 
-                          className="w-full" 
-                          onClick={() => handleSubscribe(product.name)}
-                        >
-                          Add Subscribe
-                        </Button>
-                        
-                        <div className="grid grid-cols-3 gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleDemo(product.demoUrl)}
-                            className="flex items-center gap-1"
-                          >
-                            <Play className="h-3 w-3" />
-                            Demo
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleDetail(product.id)}
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="h-3 w-3" />
-                            Detail
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleWhatsApp(product.name)}
-                            className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
-                          >
-                            <MessageCircle className="h-3 w-3" />
-                            WA
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-gray-500 text-lg">
+                      Tidak ada produk yang ditemukan untuk kategori "{activeCategory}" 
+                      {searchTerm && ` dengan kata kunci "${searchTerm}"`}
+                    </p>
+                  </div>
+                )}
               </div>
-            </section>
-          );
-        })}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
 
       {/* Footer */}
