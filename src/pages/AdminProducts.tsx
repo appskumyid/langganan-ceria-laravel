@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { ProductPagination } from '@/components/ProductPagination';
 
 interface PricingPeriod {
   monthly: string;
@@ -64,6 +64,8 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage, setProductsPerPage] = useState(20);
 
   const form = useForm<ProductFormData>({
     defaultValues: {
@@ -241,6 +243,14 @@ const AdminProducts = () => {
     form.reset();
     setIsDialogOpen(true);
   };
+
+  // Pagination logic
+  const totalProducts = products.length;
+  const totalPages = Math.ceil(totalProducts / productsPerPage);
+  const currentProducts = products.slice(
+    (currentPage - 1) * productsPerPage,
+    currentPage * productsPerPage
+  );
 
   if (roleLoading) {
     return (
@@ -499,8 +509,27 @@ const AdminProducts = () => {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Daftar Produk</CardTitle>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">Item per halaman:</p>
+            <Select
+              value={String(productsPerPage)}
+              onValueChange={(value) => {
+                setProductsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -516,7 +545,7 @@ const AdminProducts = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
+              {currentProducts.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     <img
@@ -594,6 +623,15 @@ const AdminProducts = () => {
           </Table>
         </CardContent>
       </Card>
+      {totalPages > 1 && (
+        <div className="mt-4 flex justify-center">
+          <ProductPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
     </div>
   );
 };
