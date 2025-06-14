@@ -29,7 +29,16 @@ const App = () => (
           <Route path="/home" element={<Homepage />} />
           <Route path="/products" element={<Products />} />
           <Route path="/services" element={<Services />} />
-          <Route path="/payment" element={<Payment />} />
+          <Route 
+            path="/payment/:subscriptionId" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Payment />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/auth" element={<Auth />} />
           <Route 
             path="/" 

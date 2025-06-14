@@ -1,18 +1,16 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
-import { useToast } from "@/hooks/use-toast";
 
 interface SubscribedProductCardProps {
   subscription: Tables<'user_subscriptions'>;
 }
 
 const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => {
-  const { toast } = useToast();
-
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'active':
@@ -26,13 +24,6 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
       default:
         return 'default';
     }
-  };
-
-  const handleSubmitPayment = () => {
-    toast({
-      title: "Proses Pembayaran",
-      description: "Fitur pembayaran akan segera diimplementasikan. Status Anda masih 'pending payment'.",
-    });
   };
 
   return (
@@ -66,8 +57,10 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
         )}
         
         {subscription.subscription_status === 'pending_payment' ? (
-          <Button onClick={handleSubmitPayment} className="w-full bg-orange-500 hover:bg-orange-600">
-            Selesaikan Pembayaran <ArrowRight className="ml-2 h-4 w-4" />
+           <Button asChild className="w-full bg-orange-500 hover:bg-orange-600">
+            <Link to={`/payment/${subscription.id}`}>
+              Selesaikan Pembayaran <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
         ) : (
           <>

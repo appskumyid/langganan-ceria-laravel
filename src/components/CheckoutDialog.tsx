@@ -114,7 +114,11 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
       expires_at: expiresAt,
     };
 
-    const { error } = await supabase.from('user_subscriptions').insert(subscriptionData);
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .insert(subscriptionData)
+      .select()
+      .single();
 
     setIsProcessing(false);
 
@@ -128,10 +132,14 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
     } else {
       toast({
         title: "Berhasil!",
-        description: "Produk telah ditambahkan ke langganan Anda. Silakan selesaikan pembayaran.",
+        description: "Produk telah ditambahkan. Lanjutkan ke pembayaran.",
       });
       onClose();
-      navigate('/my-subscriptions');
+      if (data) {
+        navigate(`/payment/${data.id}`);
+      } else {
+        navigate('/my-subscriptions');
+      }
     }
   };
 
