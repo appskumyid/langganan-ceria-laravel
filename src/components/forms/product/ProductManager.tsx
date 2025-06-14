@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
   DialogClose,
   DialogDescription,
 } from '@/components/ui/dialog';
@@ -45,8 +44,7 @@ const productFormSchema = z.object({
     z.number().positive('Harga harus angka positif.')
   ),
   description: z.string().optional(),
-  image_file: z.instanceof(File).optional(),
-  image_url: z.string().optional(),
+  image_url: z.string().url({ message: "URL gambar tidak valid." }).or(z.literal("")).optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -73,25 +71,14 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: { name: '', price: 0, description: '', category: '' },
+    defaultValues: { name: '', price: 0, description: '', category: '', image_url: '' },
   });
+  const imageUrl = form.watch('image_url');
 
   const upsertProductMutation = useMutation({
     mutationFn: async (values: ProductFormValues) => {
       if (!storeDetails) throw new Error('Detail toko tidak ditemukan.');
       
-      let imageUrl = values.image_url;
-
-      if (values.image_file) {
-        const file = values.image_file;
-        const filePath = `${storeDetails.user_id}/${storeDetails.id}/${uuidv4()}`;
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, file);
-        if (uploadError) throw new Error(`Gagal mengunggah gambar: ${uploadError.message}`);
-        
-        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filePath);
-        imageUrl = urlData.publicUrl;
-      }
-
       const productToUpsert = {
         id: editingProduct?.id,
         store_details_id: storeDetails.id,
@@ -100,7 +87,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
         price: values.price,
         description: values.description,
         category: values.category,
-        image_url: imageUrl,
+        image_url: values.image_url,
       };
 
       const { data, error } = await supabase
@@ -153,9 +140,11 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (product: Tables<'store_products'>) => {
-      if (product.image_url) {
+      if (product.image_url && product.image_url.includes('/storage/v1/object/public/product-images/')) {
         const path = new URL(product.image_url).pathname.split('/product-images/')[1];
-        await supabase.storage.from('product-images').remove([path]);
+        if (path) {
+          await supabase.storage.from('product-images').remove([path]);
+        }
       }
       const { error } = await supabase.from('store_products').delete().eq('id', product.id);
       if (error) throw error;
@@ -171,7 +160,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const handleAddNew = () => {
     setEditingProduct(null);
-    form.reset({ name: '', price: 0, description: '', image_url: '', image_file: undefined, category: '' });
+    form.reset({ name: '', price: 0, description: '', image_url: '', category: '' });
     setIsFormDialogOpen(true);
   };
   
@@ -281,17 +270,17 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
               <FormField control={form.control} name="description" render={({ field }) => (
                 <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="image_file" render={({ field: { onChange, value, ...rest } }) => (
+              <FormField control={form.control} name="image_url" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gambar Produk</FormLabel>
-                  <FormControl><Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} {...rest} /></FormControl>
+                  <FormLabel>URL Gambar Produk</FormLabel>
+                  <FormControl><Input placeholder="https://example.com/gambar.jpg" {...field} value={field.value ?? ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
-              {form.getValues('image_url') && !form.getValues('image_file') && (
-                <div className="text-sm text-muted-foreground">
-                  <p>Gambar saat ini:</p>
-                  <img src={form.getValues('image_url')} alt="Product" className="w-24 h-24 object-cover mt-1 rounded" />
+              {imageUrl && (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Preview Gambar:</p>
+                  <img src={imageUrl} alt="Product preview" className="w-24 h-24 object-cover mt-1 rounded" />
                 </div>
               )}
               <DialogFooter>
