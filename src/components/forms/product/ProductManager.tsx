@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +22,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { v4 as uuidv4 } from 'uuid';
 
 interface ProductManagerProps {
@@ -31,6 +39,7 @@ interface ProductManagerProps {
 const productFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Nama produk wajib diisi.'),
+  category: z.string().optional(),
   price: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
     z.number().positive('Harga harus angka positif.')
@@ -62,7 +71,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: { name: '', price: 0, description: '' },
+    defaultValues: { name: '', price: 0, description: '', category: '' },
   });
 
   const upsertProductMutation = useMutation({
@@ -88,6 +97,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
         name: values.name,
         price: values.price,
         description: values.description,
+        category: values.category,
         image_url: imageUrl,
       };
 
@@ -130,7 +140,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const handleAddNew = () => {
     setEditingProduct(null);
-    form.reset({ name: '', price: 0, description: '', image_url: '', image_file: undefined });
+    form.reset({ name: '', price: 0, description: '', image_url: '', image_file: undefined, category: '' });
     setIsDialogOpen(true);
   };
   
@@ -141,6 +151,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
       price: product.price,
       description: product.description ?? '',
       image_url: product.image_url ?? '',
+      category: product.category ?? '',
     });
     setIsDialogOpen(true);
   };
@@ -170,23 +181,42 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
       {isLoadingProducts ? (
         <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : products && products.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <Card key={product.id}>
-              <CardHeader>
-                {product.image_url && <img src={product.image_url} alt={product.name} className="w-full h-40 object-cover rounded-t-lg" />}
-                <CardTitle className="pt-4">{product.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-semibold">Rp{product.price.toLocaleString('id-ID')}</p>
-                <p className="text-sm text-muted-foreground mt-2">{product.description}</p>
-              </CardContent>
-              <CardFooter className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(product)}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="destructive" size="sm" onClick={() => deleteProductMutation.mutate(product)} disabled={deleteProductMutation.isPending}><Trash2 className="h-4 w-4" /></Button>
-              </CardFooter>
-            </Card>
-          ))}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px]">Gambar</TableHead>
+                <TableHead>Nama Produk</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead>Harga</TableHead>
+                <TableHead>Deskripsi</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-16 h-16 object-cover rounded-md" />
+                    ) : (
+                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.category || '-'}</TableCell>
+                  <TableCell>Rp{product.price.toLocaleString('id-ID')}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{product.description || '-'}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(product)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="sm" onClick={() => deleteProductMutation.mutate(product)} disabled={deleteProductMutation.isPending}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <div className="text-center py-10 border-2 border-dashed rounded-lg">
@@ -207,6 +237,9 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
             <form onSubmit={form.handleSubmit((data) => upsertProductMutation.mutate(data))} className="space-y-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>Nama Produk</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem><FormLabel>Kategori Produk</FormLabel><FormControl><Input placeholder="Contoh: Makanan" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem><FormLabel>Harga</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
