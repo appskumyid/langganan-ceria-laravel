@@ -1,11 +1,10 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Edit, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import type { VariantProps } from 'class-variance-authority';
 import {
@@ -19,8 +18,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 type Subscription = Tables<'user_subscriptions'>;
+
+const ALL_STATUSES: Array<Subscription['subscription_status']> = [
+  'active',
+  'pending_payment',
+  'waiting_confirmation',
+  'expired',
+  'cancelled',
+];
 
 const fetchAllSubscriptions = async (): Promise<Subscription[]> => {
   const { data, error } = await supabase
@@ -34,7 +58,7 @@ const fetchAllSubscriptions = async (): Promise<Subscription[]> => {
   return data || [];
 };
 
-const updateSubscriptionStatus = async ({ id, status }: { id: string; status: 'active' | 'expired' }) => {
+const updateSubscriptionStatus = async ({ id, status }: { id: string; status: string }) => {
   let updateData: Partial<Subscription> = { subscription_status: status };
   if (status === 'active') {
     const expires_at = new Date();
@@ -67,6 +91,8 @@ const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['v
 const AdminSubscriptions = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedSub, setSelectedSub] = React.useState<Subscription | null>(null);
+  const [newStatus, setNewStatus] = React.useState('');
 
   const { data: subscriptions, isLoading, error } = useQuery({
     queryKey: ['allSubscriptions'],
@@ -78,9 +104,11 @@ const AdminSubscriptions = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allSubscriptions'] });
       toast({ title: 'Sukses', description: 'Status langganan berhasil diperbarui.' });
+      setSelectedSub(null);
     },
     onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      setSelectedSub(null);
     },
   });
 
@@ -88,6 +116,17 @@ const AdminSubscriptions = () => {
     mutation.mutate({ id, status: 'active' });
   };
   
+  const handleOpenEdit = (sub: Subscription) => {
+    setSelectedSub(sub);
+    setNewStatus(sub.subscription_status);
+  };
+
+  const handleSaveStatus = () => {
+    if (selectedSub && newStatus) {
+      mutation.mutate({ id: selectedSub.id, status: newStatus });
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
   }
@@ -123,34 +162,80 @@ const AdminSubscriptions = () => {
                 </TableCell>
                 <TableCell>{new Date(sub.created_at).toLocaleDateString('id-ID')}</TableCell>
                 <TableCell className="text-right">
-                  {sub.subscription_status === 'waiting_confirmation' && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                         <Button size="sm" disabled={mutation.isPending}>
-                            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Setujui'}
-                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Konfirmasi Persetujuan</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Anda yakin ingin menyetujui pembayaran untuk langganan {sub.product_name} oleh {sub.customer_name}? Status akan berubah menjadi 'active'.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleApprove(sub.id)}>
-                            Ya, Setujui
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {sub.subscription_status === 'waiting_confirmation' && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button size="sm" disabled={mutation.isPending}>
+                              {mutation.isPending && mutation.variables?.id === sub.id ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Setujui'}
+                           </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Konfirmasi Persetujuan</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Anda yakin ingin menyetujui pembayaran untuk langganan {sub.product_name} oleh {sub.customer_name}? Status akan berubah menjadi 'active'.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleApprove(sub.id)}>
+                              Ya, Setujui
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => handleOpenEdit(sub)}>
+                      <Edit className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">Detail</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
+        <Dialog open={!!selectedSub} onOpenChange={(isOpen) => { if (!isOpen) setSelectedSub(null) }}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Langganan</DialogTitle>
+              <DialogDescription>
+                Ubah status untuk langganan {selectedSub?.product_name} oleh {selectedSub?.customer_name}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
+                <Select
+                  value={newStatus}
+                  onValueChange={(value) => setNewStatus(value)}
+                >
+                  <SelectTrigger id="status" className="col-span-3">
+                    <SelectValue placeholder="Pilih status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_STATUSES.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status.replace(/_/g, ' ').toUpperCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSelectedSub(null)}>Batal</Button>
+              <Button onClick={handleSaveStatus} disabled={mutation.isPending}>
+                {mutation.isPending && mutation.variables?.id === selectedSub?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                Simpan Perubahan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 };
