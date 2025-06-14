@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useForm } from 'react-hook-form';
 import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -26,6 +27,7 @@ interface Product {
   id: number;
   name: string;
   description: string;
+  type: 'premium' | 'non-premium';
   category: string;
   pricing: PricingPeriod;
   image: string;
@@ -36,6 +38,7 @@ interface Product {
 interface ProductFormData {
   name: string;
   description: string;
+  type: 'premium' | 'non-premium';
   category: string;
   monthlyPrice: string;
   quarterlyPrice: string;
@@ -66,6 +69,7 @@ const AdminProducts = () => {
     defaultValues: {
       name: '',
       description: '',
+      type: 'non-premium',
       category: '',
       monthlyPrice: '',
       quarterlyPrice: '',
@@ -83,6 +87,7 @@ const AdminProducts = () => {
       id: 1,
       name: "Paket Basic",
       description: "Paket langganan dasar dengan fitur lengkap untuk bisnis kecil",
+      type: "non-premium",
       category: "E-Commerce",
       pricing: {
         monthly: "Rp 99.000",
@@ -98,6 +103,7 @@ const AdminProducts = () => {
       id: 2,
       name: "Paket Professional",
       description: "Paket untuk bisnis menengah dengan fitur advanced",
+      type: "premium",
       category: "Company Profile",
       pricing: {
         monthly: "Rp 199.000",
@@ -113,6 +119,7 @@ const AdminProducts = () => {
       id: 3,
       name: "Paket Enterprise",
       description: "Solusi lengkap untuk perusahaan besar",
+      type: "premium",
       category: "Aplikasi Bisnis (ERP, POS, LMS, dll)",
       pricing: {
         monthly: "Rp 499.000",
@@ -143,6 +150,7 @@ const AdminProducts = () => {
           ...editingProduct,
           name: data.name,
           description: data.description,
+          type: data.type,
           category: data.category,
           pricing: {
             monthly: data.monthlyPrice,
@@ -166,6 +174,7 @@ const AdminProducts = () => {
           id: Date.now(),
           name: data.name,
           description: data.description,
+          type: data.type,
           category: data.category,
           pricing: {
             monthly: data.monthlyPrice,
@@ -204,6 +213,7 @@ const AdminProducts = () => {
     form.reset({
       name: product.name,
       description: product.description,
+      type: product.type,
       category: product.category,
       monthlyPrice: product.pricing.monthly,
       quarterlyPrice: product.pricing.quarterly,
@@ -303,6 +313,37 @@ const AdminProducts = () => {
                       <FormLabel>Deskripsi</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Masukkan deskripsi produk" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Type Produk</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="non-premium" id="non-premium" />
+                            <label htmlFor="non-premium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              Non Premium
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="premium" id="premium" />
+                            <label htmlFor="premium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              Premium
+                            </label>
+                          </div>
+                        </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -467,6 +508,7 @@ const AdminProducts = () => {
               <TableRow>
                 <TableHead>Gambar</TableHead>
                 <TableHead>Nama Produk</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead>Harga</TableHead>
                 <TableHead>Fitur</TableHead>
@@ -488,6 +530,11 @@ const AdminProducts = () => {
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-gray-500">{product.description}</p>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.type === 'premium' ? 'default' : 'secondary'}>
+                      {product.type === 'premium' ? 'Premium' : 'Non Premium'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{product.category}</Badge>
