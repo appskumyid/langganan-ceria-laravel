@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import * as LucideIcons from "lucide-react";
+import { icons } from "lucide-react";
 
 const serviceSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -33,7 +33,7 @@ const serviceSchema = z.object({
   category: z.string().min(1, "Category is required"),
   pricing: z.string().nullable(),
   duration: z.string().nullable(),
-  features: z.string().transform(val => val.split(',').map(item => item.trim()).filter(Boolean)),
+  features: z.string().optional(),
   icon_name: z.string().nullable(),
 });
 
@@ -44,7 +44,7 @@ interface ServiceFormDialogProps {
   children: React.ReactNode;
 }
 
-const iconNames = Object.keys(LucideIcons).filter(key => /^[A-Z]/.test(key) && key !== 'createLucideIcon' && key !== 'icons');
+const iconNames = Object.keys(icons);
 
 export const ServiceFormDialog = ({ service, children }: ServiceFormDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -79,10 +79,12 @@ export const ServiceFormDialog = ({ service, children }: ServiceFormDialogProps)
   }, [isOpen, service, reset]);
 
   const onSubmit = (data: ServiceFormValues) => {
+    const featuresArray = data.features ? data.features.split(',').map(item => item.trim()).filter(Boolean) : [];
     const serviceData = {
         ...data,
-        features: data.features as string[],
+        features: featuresArray,
     };
+
     if (service) {
       updateServiceMutation.mutate({ ...serviceData, id: service.id });
     } else {
