@@ -55,25 +55,40 @@ const fetchSettings = async () => {
 
 // Function to save settings
 const saveSettings = async (settings: { key: string; value: string | null }[]) => {
+  console.log("Upserting settings to Supabase:", settings)
   const { error } = await supabase.from("app_settings").upsert(settings)
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error("Supabase upsert error:", error)
+    throw new Error(error.message)
+  }
 }
 
 export default function AdminSettings() {
   const queryClient = useQueryClient()
 
-  const { data: settings, isLoading: isLoadingSettings } = useQuery({
+  const { data: settings, isLoading: isLoadingSettings, error: settingsError } = useQuery({
     queryKey: ["app_settings"],
     queryFn: fetchSettings,
   })
 
+  useEffect(() => {
+    if (settingsError) {
+      console.error("Error fetching settings:", settingsError)
+      toast.error("Gagal memuat pengaturan.", {
+        description: settingsError.message,
+      })
+    }
+  }, [settingsError])
+
   const { mutate, isPending } = useMutation({
     mutationFn: saveSettings,
     onSuccess: () => {
+      console.log("Settings saved successfully!")
       toast.success("Pengaturan berhasil disimpan!")
       queryClient.invalidateQueries({ queryKey: ["app_settings"] })
     },
     onError: (error) => {
+      console.error("Failed to save settings mutation:", error)
       toast.error("Gagal menyimpan pengaturan:", {
         description: error.message,
       })
@@ -98,6 +113,7 @@ export default function AdminSettings() {
 
   useEffect(() => {
     if (settings) {
+      console.log("Settings loaded, resetting forms:", settings)
       mailchimpForm.reset({
         mailchimp_api_key: settings.mailchimp_api_key || "",
         mailchimp_list_id: settings.mailchimp_list_id || "",
@@ -114,6 +130,7 @@ export default function AdminSettings() {
       key,
       value,
     }))
+    console.log("Attempting to save Mailchimp settings:", settingsToSave)
     mutate(settingsToSave)
   }
 
@@ -122,6 +139,7 @@ export default function AdminSettings() {
       key,
       value,
     }))
+    console.log("Attempting to save Gateway settings:", settingsToSave)
     mutate(settingsToSave)
   }
   
