@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,7 +81,8 @@ const ProductList = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {productsData.map((product) => {
         const pricing = product.pricing as PricingInfo[] | null;
-        const displayPriceInfo = pricing && pricing.length > 0 ? pricing[0] : null;
+        const monthlyPriceInfo = pricing?.find(p => p.period === 'monthly');
+        const displayPriceInfo = monthlyPriceInfo || (pricing && pricing.length > 0 ? pricing[0] : null);
         const displayPrice = displayPriceInfo ? Number(displayPriceInfo.price) : 0;
         
         return (
