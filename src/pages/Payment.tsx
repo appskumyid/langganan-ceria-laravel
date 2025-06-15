@@ -11,6 +11,7 @@ import { CheckCircle, Copy, Clock, ArrowLeft, Loader2, Banknote, CreditCard } fr
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 const fetchSubscriptionDetails = async (subscriptionId: string, userId: string | undefined) => {
   if (!userId) throw new Error("User not authenticated");
@@ -36,6 +37,7 @@ const Payment = () => {
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("bank_transfer");
   const [isConfirming, setIsConfirming] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data: subscription, isLoading, error: queryError } = useQuery({
     queryKey: ['subscriptionDetails', subscriptionId],
@@ -67,12 +69,52 @@ const Payment = () => {
 
   const handleConfirmPayment = async () => {
     if (!subscription) return;
+
+    if (!selectedFile && selectedPaymentMethod === 'bank_transfer') {
+      toast({
+        title: "Bukti Pembayaran Diperlukan",
+        description: "Silakan unggah bukti pembayaran Anda.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsConfirming(true);
 
     try {
+      let paymentProofUrl: string | null = null;
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${subscription.user_id}-${subscription.id}-${new Date().getTime()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('payment_proofs')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw new Error(`Gagal mengunggah bukti: ${uploadError.message}`);
+        }
+        
+        const { data: urlData } = supabase.storage
+          .from('payment_proofs')
+          .getPublicUrl(filePath);
+
+        if (!urlData) {
+          throw new Error("Tidak bisa mendapatkan URL bukti pembayaran.");
+        }
+        paymentProofUrl = urlData.publicUrl;
+      }
+
       const { error } = await supabase
         .from('user_subscriptions')
-        .update({ subscription_status: 'waiting_confirmation' })
+        .update({ 
+          subscription_status: 'waiting_confirmation',
+          payment_proof_url: paymentProofUrl
+        })
         .eq('id', subscription.id);
 
       if (error) throw error;
@@ -192,28 +234,47 @@ const Payment = () => {
             </Card>
 
             {selectedPaymentMethod === 'bank_transfer' && (
-              <Card>
-                <CardHeader><CardTitle>Instruksi Transfer Bank</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-600">Bank:</span>
-                        <span className="font-medium">Bank BCA</span>
+              <>
+                <Card>
+                  <CardHeader><CardTitle>Instruksi Transfer Bank</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-600">Bank:</span>
+                          <span className="font-medium">Bank BCA</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-600">No. Rekening:</span>
+                          <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold">1234567890</span>
+                              <Button size="sm" variant="ghost" onClick={() => copyToClipboard('1234567890')}><Copy className="h-4 w-4" /></Button>
+                          </div>
+                      </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Jumlah:</span>
+                          <span className="font-bold text-lg text-green-600">{subscription.product_price}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-600">No. Rekening:</span>
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold">1234567890</span>
-                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard('1234567890')}><Copy className="h-4 w-4" /></Button>
-                        </div>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Jumlah:</span>
-                        <span className="font-bold text-lg text-green-600">{subscription.product_price}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Unggah Bukti Pembayaran</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Input
+                      id="paymentProof"
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                      accept="image/png, image/jpeg, image/jpg, application/pdf"
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Unggah screenshot atau PDF bukti transfer Anda.
+                    </p>
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             <Button onClick={handleConfirmPayment} className="w-full" disabled={timeLeft === 0 || isConfirming}>

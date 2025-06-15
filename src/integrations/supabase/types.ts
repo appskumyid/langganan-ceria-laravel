@@ -553,12 +553,14 @@ export type Database = {
           expires_at: string | null
           id: string
           payment_method_selected: string | null
+          payment_proof_url: string | null
           product_category: string
           product_name: string
           product_period: string
           product_price: string
           product_static_id: number
           product_type: string
+          rejection_reason: string | null
           subscribed_at: string
           subscription_status: string
           updated_at: string
@@ -572,12 +574,14 @@ export type Database = {
           expires_at?: string | null
           id?: string
           payment_method_selected?: string | null
+          payment_proof_url?: string | null
           product_category: string
           product_name: string
           product_period: string
           product_price: string
           product_static_id: number
           product_type: string
+          rejection_reason?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string
@@ -591,12 +595,14 @@ export type Database = {
           expires_at?: string | null
           id?: string
           payment_method_selected?: string | null
+          payment_proof_url?: string | null
           product_category?: string
           product_name?: string
           product_period?: string
           product_price?: string
           product_static_id?: number
           product_type?: string
+          rejection_reason?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string
