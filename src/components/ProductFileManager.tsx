@@ -44,6 +44,8 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
     },
   });
 
+  const htmlContent = form.watch('html_content');
+
   const { data: files, isLoading: isLoadingFiles } = useQuery({
     queryKey: ['product_files', product.id],
     queryFn: async () => {
@@ -132,46 +134,60 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
               Tambah File
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>{editingFile ? 'Edit File' : 'Tambah File Baru'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="file_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nama File</FormLabel>
-                      <FormControl>
-                        <Input placeholder="contoh: index.html" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="html_content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Konten HTML</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="&lt;p&gt;Hello World&lt;/p&gt;" {...field} rows={10} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={upsertFileMutation.isPending}>
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={upsertFileMutation.isPending}>
-                    {upsertFileMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {editingFile ? 'Perbarui' : 'Simpan'}
-                  </Button>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid md:grid-cols-2 gap-6 flex-grow min-h-0 py-4">
+                <div className="space-y-4 flex flex-col">
+                  <FormField
+                    control={form.control}
+                    name="file_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nama File</FormLabel>
+                        <FormControl>
+                          <Input placeholder="contoh: index.html" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="html_content"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col flex-grow">
+                        <FormLabel>Konten HTML</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="&lt;p&gt;Hello World&lt;/p&gt;" {...field} className="min-h-[300px] flex-grow" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={upsertFileMutation.isPending}>
+                      Batal
+                    </Button>
+                    <Button type="submit" disabled={upsertFileMutation.isPending}>
+                      {upsertFileMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {editingFile ? 'Perbarui' : 'Simpan'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col h-full">
+                  <FormLabel>Preview</FormLabel>
+                  <div className="border rounded-md mt-2 flex-grow bg-white">
+                    <iframe
+                      srcDoc={htmlContent || ''}
+                      title="HTML Preview"
+                      className="w-full h-full border-0"
+                      sandbox="allow-scripts"
+                    />
+                  </div>
                 </div>
               </form>
             </Form>
