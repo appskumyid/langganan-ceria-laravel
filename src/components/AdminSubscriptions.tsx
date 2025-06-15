@@ -36,6 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type Subscription = Tables<'user_subscriptions'>;
 
@@ -103,6 +105,8 @@ const AdminSubscriptions = () => {
   const { toast } = useToast();
   const [selectedSub, setSelectedSub] = React.useState<Subscription | null>(null);
   const [newStatus, setNewStatus] = React.useState('');
+  const [emailSubject, setEmailSubject] = React.useState('');
+  const [emailMessage, setEmailMessage] = React.useState('');
 
   const { data: subscriptions, isLoading, error } = useQuery({
     queryKey: ['allSubscriptions'],
@@ -136,6 +140,24 @@ const AdminSubscriptions = () => {
     },
   });
 
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ to, subject, message, customerName }: { to: string, subject: string, message: string, customerName: string }) => {
+        const { error, data } = await supabase.functions.invoke('send-subscription-message', {
+            body: { to, subject, message, customerName },
+        });
+        if (error) throw new Error(error.message);
+        return data;
+    },
+    onSuccess: () => {
+        toast({ title: 'Sukses', description: 'Pesan berhasil dikirim ke pelanggan.' });
+        setEmailSubject('');
+        setEmailMessage('');
+    },
+    onError: (err: any) => {
+        toast({ title: 'Error', description: `Gagal mengirim pesan: ${err.message}`, variant: 'destructive' });
+    },
+  });
+
   const handleApprove = (id: string, period: string) => {
     const now = new Date();
     let expiresAt = new Date();
@@ -158,11 +180,26 @@ const AdminSubscriptions = () => {
   const handleOpenEdit = (sub: Subscription) => {
     setSelectedSub(sub);
     setNewStatus(sub.subscription_status);
+    setEmailSubject('');
+    setEmailMessage('');
   };
 
   const handleSaveStatus = () => {
     if (selectedSub && newStatus) {
       mutation.mutate({ id: selectedSub.id, status: newStatus });
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (selectedSub && emailSubject && emailMessage) {
+        sendEmailMutation.mutate({
+            to: selectedSub.customer_email,
+            subject: emailSubject,
+            message: emailMessage,
+            customerName: selectedSub.customer_name,
+        });
+    } else {
+        toast({ title: 'Peringatan', description: 'Subjek dan isi pesan tidak boleh kosong.', variant: 'destructive' });
     }
   };
 
@@ -262,11 +299,11 @@ const AdminSubscriptions = () => {
         </Table>
 
         <Dialog open={!!selectedSub} onOpenChange={(isOpen) => { if (!isOpen) setSelectedSub(null) }}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Edit Langganan</DialogTitle>
+              <DialogTitle>Detail Langganan</DialogTitle>
               <DialogDescription>
-                Ubah status untuk langganan {selectedSub?.product_name} oleh {selectedSub?.customer_name}.
+                Kelola langganan untuk {selectedSub?.product_name} oleh {selectedSub?.customer_name}.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -291,11 +328,42 @@ const AdminSubscriptions = () => {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
+            <div className="grid gap-4 py-4 border-t">
+              <h3 className="text-md font-medium px-1">Kirim Pesan ke Pelanggan</h3>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email-subject" className="text-right">
+                  Subjek
+                </Label>
+                <Input
+                  id="email-subject"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Subjek email..."
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email-message" className="text-right">
+                  Pesan
+                </Label>
+                <Textarea
+                  id="email-message"
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Tulis pesan Anda di sini..."
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2">
               <Button variant="outline" onClick={() => setSelectedSub(null)}>Batal</Button>
               <Button onClick={handleSaveStatus} disabled={mutation.isPending}>
-                {mutation.isPending && mutation.variables?.id === selectedSub?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                Simpan Perubahan
+                {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                Simpan Status
+              </Button>
+              <Button onClick={handleSendMessage} disabled={sendEmailMutation.isPending}>
+                {sendEmailMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                Kirim Pesan
               </Button>
             </DialogFooter>
           </DialogContent>
