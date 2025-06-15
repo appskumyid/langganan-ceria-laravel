@@ -224,6 +224,48 @@ export type Database = {
           },
         ]
       }
+      managed_products: {
+        Row: {
+          category: string
+          created_at: string
+          demo_url: string | null
+          description: string | null
+          features: string[] | null
+          id: string
+          image_url: string | null
+          name: string
+          pricing: Json
+          type: Database["public"]["Enums"]["product_type_enum"]
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          image_url?: string | null
+          name: string
+          pricing: Json
+          type: Database["public"]["Enums"]["product_type_enum"]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          pricing?: Json
+          type?: Database["public"]["Enums"]["product_type_enum"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string

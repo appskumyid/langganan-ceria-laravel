@@ -15,6 +15,9 @@ import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { ProductPagination } from '@/components/ProductPagination';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Tables, Json } from '@/integrations/supabase/types';
 
 interface PricingPeriod {
   monthly: string;
@@ -23,22 +26,12 @@ interface PricingPeriod {
   yearly: string;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  type: 'premium' | 'non-premium';
-  category: string;
-  pricing: PricingPeriod;
-  image: string;
-  features: string[];
-  demoUrl: string;
-}
+type Product = Tables<'managed_products'>;
 
 interface ProductFormData {
   name: string;
   description: string;
-  type: 'premium' | 'non-premium';
+  type: 'Premium' | 'Non-Premium';
   category: string;
   monthlyPrice: string;
   quarterlyPrice: string;
@@ -59,19 +52,18 @@ const categories = [
 
 const AdminProducts = () => {
   const { isAdmin, loading: roleLoading } = useUserRole();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(20);
+  const queryClient = useQueryClient();
 
   const form = useForm<ProductFormData>({
     defaultValues: {
       name: '',
       description: '',
-      type: 'non-premium',
+      type: 'Non-Premium',
       category: '',
       monthlyPrice: '',
       quarterlyPrice: '',
@@ -83,158 +75,124 @@ const AdminProducts = () => {
     }
   });
 
-  // Mock data with new pricing structure and categories
-  const mockProducts: Product[] = [
-    {
-      id: 1,
-      name: "Paket Basic",
-      description: "Paket langganan dasar dengan fitur lengkap untuk bisnis kecil",
-      type: "non-premium",
-      category: "E-Commerce",
-      pricing: {
-        monthly: "Rp 99.000",
-        quarterly: "Rp 270.000",
-        semiAnnual: "Rp 510.000",
-        yearly: "Rp 990.000"
-      },
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?ixlib=rb-4.0.3",
-      features: ["5 User", "10GB Storage", "Email Support", "Basic Analytics"],
-      demoUrl: "https://demo.example.com/basic"
-    },
-    {
-      id: 2,
-      name: "Paket Professional",
-      description: "Paket untuk bisnis menengah dengan fitur advanced",
-      type: "premium",
-      category: "Company Profile",
-      pricing: {
-        monthly: "Rp 199.000",
-        quarterly: "Rp 540.000",
-        semiAnnual: "Rp 1.020.000",
-        yearly: "Rp 1.980.000"
-      },
-      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3",
-      features: ["25 User", "100GB Storage", "Priority Support", "Advanced Analytics", "API Access"],
-      demoUrl: "https://demo.example.com/professional"
-    },
-    {
-      id: 3,
-      name: "Paket Enterprise",
-      description: "Solusi lengkap untuk perusahaan besar",
-      type: "premium",
-      category: "Aplikasi Bisnis (ERP, POS, LMS, dll)",
-      pricing: {
-        monthly: "Rp 499.000",
-        quarterly: "Rp 1.350.000",
-        semiAnnual: "Rp 2.550.000",
-        yearly: "Rp 4.950.000"
-      },
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3",
-      features: ["Unlimited User", "1TB Storage", "24/7 Support", "Custom Analytics", "Full API", "Dedicated Manager"],
-      demoUrl: "https://demo.example.com/enterprise"
-    }
-  ];
+  const { data: productsData, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['managed_products', currentPage, productsPerPage],
+    queryFn: async () => {
+      const from = (currentPage - 1) * productsPerPage;
+      const to = from + productsPerPage - 1;
 
-  useEffect(() => {
-    if (!roleLoading && isAdmin) {
-      setProducts(mockProducts);
-    }
-  }, [isAdmin, roleLoading]);
+      const { data, error, count } = await supabase
+        .from('managed_products')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-  const onSubmit = async (data: ProductFormData) => {
-    setLoading(true);
-    try {
-      const featuresArray = data.features.split(',').map(f => f.trim()).filter(f => f);
-      
-      if (editingProduct) {
-        // Update existing product
-        const updatedProduct: Product = {
-          ...editingProduct,
-          name: data.name,
-          description: data.description,
-          type: data.type,
-          category: data.category,
-          pricing: {
-            monthly: data.monthlyPrice,
-            quarterly: data.quarterlyPrice,
-            semiAnnual: data.semiAnnualPrice,
-            yearly: data.yearlyPrice
-          },
-          image: data.image,
-          features: featuresArray,
-          demoUrl: data.demoUrl
-        };
-        
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? updatedProduct : p));
-        toast({
-          title: "Produk berhasil diperbarui",
-          description: `${data.name} telah diperbarui.`
-        });
-      } else {
-        // Add new product
-        const newProduct: Product = {
-          id: Date.now(),
-          name: data.name,
-          description: data.description,
-          type: data.type,
-          category: data.category,
-          pricing: {
-            monthly: data.monthlyPrice,
-            quarterly: data.quarterlyPrice,
-            semiAnnual: data.semiAnnualPrice,
-            yearly: data.yearlyPrice
-          },
-          image: data.image,
-          features: featuresArray,
-          demoUrl: data.demoUrl
-        };
-        
-        setProducts(prev => [...prev, newProduct]);
-        toast({
-          title: "Produk berhasil ditambahkan",
-          description: `${data.name} telah ditambahkan ke daftar produk.`
-        });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        throw new Error(error.message);
       }
+      return { products: data, count };
+    },
+    enabled: !roleLoading && isAdmin,
+  });
+  
+  const products = productsData?.products || [];
+  const totalProducts = productsData?.count || 0;
+  const totalPages = Math.ceil(totalProducts / productsPerPage);
 
+  const upsertProductMutation = useMutation({
+    mutationFn: async (data: ProductFormData) => {
+      const featuresArray = data.features.split(',').map(f => f.trim()).filter(f => f);
+      const pricing: PricingPeriod = {
+        monthly: data.monthlyPrice,
+        quarterly: data.quarterlyPrice,
+        semiAnnual: data.semiAnnualPrice,
+        yearly: data.yearlyPrice
+      };
+
+      const productToUpsert = {
+        id: editingProduct?.id,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        category: data.category,
+        pricing: pricing as unknown as Json,
+        image_url: data.image,
+        features: featuresArray,
+        demo_url: data.demoUrl,
+      };
+
+      const { error } = await supabase.from('managed_products').upsert(productToUpsert);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['managed_products'] });
       setIsDialogOpen(false);
       setEditingProduct(null);
       form.reset();
-    } catch (error) {
+      toast({
+        title: `Produk berhasil ${editingProduct ? 'diperbarui' : 'ditambahkan'}`,
+        description: `${data.name} telah ${editingProduct ? 'diperbarui' : 'ditambahkan'}.`
+      });
+    },
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan saat menyimpan produk.",
+        description: `Terjadi kesalahan: ${error.message}`,
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    form.reset({
-      name: product.name,
-      description: product.description,
-      type: product.type,
-      category: product.category,
-      monthlyPrice: product.pricing.monthly,
-      quarterlyPrice: product.pricing.quarterly,
-      semiAnnualPrice: product.pricing.semiAnnual,
-      yearlyPrice: product.pricing.yearly,
-      image: product.image,
-      features: product.features.join(', '),
-      demoUrl: product.demoUrl
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (productId: number) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
-      setProducts(prev => prev.filter(p => p.id !== productId));
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const { error } = await supabase.from('managed_products').delete().eq('id', productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['managed_products'] });
       toast({
         title: "Produk berhasil dihapus",
         description: "Produk telah dihapus dari daftar."
       });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Gagal menghapus produk: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+
+  const onSubmit = (data: ProductFormData) => {
+    upsertProductMutation.mutate(data);
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    const pricing = product.pricing as unknown as PricingPeriod;
+    form.reset({
+      name: product.name,
+      description: product.description ?? '',
+      type: product.type,
+      category: product.category,
+      monthlyPrice: pricing.monthly || '',
+      quarterlyPrice: pricing.quarterly || '',
+      semiAnnualPrice: pricing.semiAnnual || '',
+      yearlyPrice: pricing.yearly || '',
+      image: product.image_url ?? '',
+      features: product.features?.join(', ') ?? '',
+      demoUrl: product.demo_url ?? ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
+      deleteProductMutation.mutate(productId);
     }
   };
 
@@ -244,15 +202,7 @@ const AdminProducts = () => {
     setIsDialogOpen(true);
   };
 
-  // Pagination logic
-  const totalProducts = products.length;
-  const totalPages = Math.ceil(totalProducts / productsPerPage);
-  const currentProducts = products.slice(
-    (currentPage - 1) * productsPerPage,
-    currentPage * productsPerPage
-  );
-
-  if (roleLoading) {
+  if (roleLoading || (isAdmin && isLoadingProducts)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -342,13 +292,13 @@ const AdminProducts = () => {
                           className="flex flex-col space-y-1"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="non-premium" id="non-premium" />
+                            <RadioGroupItem value="Non-Premium" id="non-premium" />
                             <label htmlFor="non-premium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                               Non Premium
                             </label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="premium" id="premium" />
+                            <RadioGroupItem value="Premium" id="premium" />
                             <label htmlFor="premium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                               Premium
                             </label>
@@ -494,11 +444,12 @@ const AdminProducts = () => {
                     type="button" 
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
+                    disabled={upsertProductMutation.isPending}
                   >
                     Batal
                   </Button>
-                  <Button type="submit" disabled={loading}>
-                    {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Button type="submit" disabled={upsertProductMutation.isPending}>
+                    {upsertProductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {editingProduct ? 'Perbarui' : 'Tambah'} Produk
                   </Button>
                 </div>
@@ -545,11 +496,11 @@ const AdminProducts = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentProducts.map((product) => (
+              {products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     <img
-                      src={product.image}
+                      src={product.image_url || '/placeholder.svg'}
                       alt={product.name}
                       className="w-16 h-16 object-cover rounded"
                     />
@@ -561,8 +512,8 @@ const AdminProducts = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={product.type === 'premium' ? 'default' : 'secondary'}>
-                      {product.type === 'premium' ? 'Premium' : 'Non Premium'}
+                    <Badge variant={product.type === 'Premium' ? 'default' : 'secondary'}>
+                      {product.type}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -571,29 +522,29 @@ const AdminProducts = () => {
                   <TableCell>
                     <div className="space-y-1">
                       <div className="text-sm">
-                        <span className="font-semibold">Bulanan:</span> {product.pricing.monthly}
+                        <span className="font-semibold">Bulanan:</span> {(product.pricing as unknown as PricingPeriod).monthly}
                       </div>
                       <div className="text-sm">
-                        <span className="font-semibold">3 Bulan:</span> {product.pricing.quarterly}
+                        <span className="font-semibold">3 Bulan:</span> {(product.pricing as unknown as PricingPeriod).quarterly}
                       </div>
                       <div className="text-sm">
-                        <span className="font-semibold">6 Bulan:</span> {product.pricing.semiAnnual}
+                        <span className="font-semibold">6 Bulan:</span> {(product.pricing as unknown as PricingPeriod).semiAnnual}
                       </div>
                       <div className="text-sm">
-                        <span className="font-semibold">Tahunan:</span> {product.pricing.yearly}
+                        <span className="font-semibold">Tahunan:</span> {(product.pricing as unknown as PricingPeriod).yearly}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {product.features.slice(0, 3).map((feature, index) => (
+                      {(product.features || []).slice(0, 3).map((feature, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {feature}
                         </Badge>
                       ))}
-                      {product.features.length > 3 && (
+                      {(product.features?.length || 0) > 3 && (
                         <Badge variant="outline" className="text-xs">
-                          +{product.features.length - 3} lainnya
+                          +{(product.features?.length || 0) - 3} lainnya
                         </Badge>
                       )}
                     </div>
@@ -611,6 +562,7 @@ const AdminProducts = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(product.id)}
+                        disabled={deleteProductMutation.isPending}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
