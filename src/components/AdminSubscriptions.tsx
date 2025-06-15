@@ -1,11 +1,10 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Loader2 } from 'lucide-react';
+import { Edit, Loader2, Eye } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import type { VariantProps } from 'class-variance-authority';
 import { Link } from 'react-router-dom';
@@ -60,22 +59,31 @@ const fetchAllSubscriptions = async (): Promise<Subscription[]> => {
   return data || [];
 };
 
-const updateSubscriptionStatus = async ({ id, status }: { id: string; status: string }) => {
-  let updateData: Partial<Subscription> = { subscription_status: status };
-  if (status === 'active') {
-    const expires_at = new Date();
-    expires_at.setMonth(expires_at.getMonth() + 1);
-    updateData.expires_at = expires_at.toISOString();
-    updateData.subscribed_at = new Date().toISOString();
+const updateSubscriptionStatus = async ({ id, status, expires_at, rejection_reason }: { id: string; status: string; expires_at?: string | null, rejection_reason?: string | null }) => {
+  const updateData: { 
+      subscription_status: string, 
+      expires_at?: string | null, 
+      rejection_reason?: string | null, 
+      subscribed_at?: string 
+  } = { subscription_status: status };
+  
+  if (expires_at !== undefined) {
+      updateData.expires_at = expires_at;
+      updateData.subscribed_at = new Date().toISOString();
+  }
+   if (rejection_reason !== undefined) {
+      updateData.rejection_reason = rejection_reason;
+  } else {
+      updateData.rejection_reason = null;
   }
 
   const { error } = await supabase
-    .from('user_subscriptions')
-    .update(updateData)
-    .eq('id', id);
+      .from('user_subscriptions')
+      .update(updateData)
+      .eq('id', id);
 
   if (error) {
-    throw new Error(error.message);
+      throw new Error(error.message);
   }
 };
 
@@ -109,16 +117,18 @@ const AdminSubscriptions = () => {
       setSelectedSub(null);
 
       // Invoke sync function after successful status update
-      supabase.functions.invoke('mailchimp-sync', {
-        body: { subscription_id: variables.id }
-      }).then(({ error }) => {
-        if (error) {
-            console.error("Mailchimp sync failed:", error.message);
-            toast({ title: 'Peringatan', description: `Sinkronisasi ke Mailchimp gagal: ${error.message}`, variant: 'destructive' });
-        } else {
-            toast({ title: 'Sinkronisasi Berhasil', description: 'Data pelanggan berhasil disinkronkan ke Mailchimp.' });
-        }
-      });
+      if (variables.status === 'active') {
+        supabase.functions.invoke('mailchimp-sync', {
+          body: { subscription_id: variables.id }
+        }).then(({ error }) => {
+          if (error) {
+              console.error("Mailchimp sync failed:", error.message);
+              toast({ title: 'Peringatan', description: `Sinkronisasi ke Mailchimp gagal: ${error.message}`, variant: 'destructive' });
+          } else {
+              toast({ title: 'Sinkronisasi Berhasil', description: 'Data pelanggan berhasil disinkronkan ke Mailchimp.' });
+          }
+        });
+      }
     },
     onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -126,8 +136,23 @@ const AdminSubscriptions = () => {
     },
   });
 
-  const handleApprove = (id: string) => {
-    mutation.mutate({ id, status: 'active' });
+  const handleApprove = (id: string, period: string) => {
+    const now = new Date();
+    let expiresAt = new Date();
+    
+    if (period.toLowerCase().includes('bulan')) {
+        expiresAt.setMonth(now.getMonth() + 1);
+    } else if (period.toLowerCase().includes('tahun')) {
+        expiresAt.setFullYear(now.getFullYear() + 1);
+    } else {
+        expiresAt.setMonth(now.getMonth() + 1);
+    }
+    mutation.mutate({ id, status: 'active', expires_at: expiresAt.toISOString() });
+  };
+  
+  const handleReject = (id: string) => {
+      const reason = window.prompt("Masukkan alasan penolakan (kosongkan jika tidak ada):");
+      mutation.mutate({ id, status: 'pending_payment', rejection_reason: reason || null });
   };
   
   const handleOpenEdit = (sub: Subscription) => {
@@ -177,30 +202,46 @@ const AdminSubscriptions = () => {
                 <TableCell>{new Date(sub.created_at).toLocaleDateString('id-ID')}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    {sub.subscription_status === 'waiting_confirmation' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button size="sm" disabled={mutation.isPending}>
-                              {mutation.isPending && mutation.variables?.id === sub.id ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Setujui'}
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Konfirmasi Persetujuan</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Anda yakin ingin menyetujui pembayaran untuk langganan {sub.product_name} oleh {sub.customer_name}? Status akan berubah menjadi 'active'.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleApprove(sub.id)}>
-                              Ya, Setujui
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                    {sub.subscription_status === 'active' ? (
+                    {sub.subscription_status === 'waiting_confirmation' ? (
+                      <>
+                        {sub.payment_proof_url && (
+                          <Button asChild variant="ghost" size="icon" title="Lihat Bukti Pembayaran">
+                            <a href={sub.payment_proof_url} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={mutation.isPending}>
+                              {mutation.isPending && mutation.variables?.id === sub.id && mutation.variables.status === 'active' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Setujui'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Konfirmasi Persetujuan</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Anda yakin ingin menyetujui pembayaran untuk langganan {sub.product_name} oleh {sub.customer_name}? Status akan berubah menjadi 'active'.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleApprove(sub.id, sub.product_period)}>
+                                Ya, Setujui
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => handleReject(sub.id)}
+                            disabled={mutation.isPending}
+                        >
+                            {mutation.isPending && mutation.variables?.id === sub.id && mutation.variables.status === 'pending_payment' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Tolak'}
+                        </Button>
+                      </>
+                    ) : sub.subscription_status === 'active' ? (
                       <Button asChild variant="outline" size="sm">
                         <Link to={`/admin/subscription/${sub.id}`}>
                           <Edit className="h-4 w-4 md:mr-2" />
