@@ -81,14 +81,21 @@ const ProductList = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {productsData.map((product) => {
         let pricing: PricingInfo[] = [];
+        const productPricing = product.pricing;
 
-        if (Array.isArray(product.pricing)) {
-          pricing = product.pricing as PricingInfo[];
-        } else if (typeof product.pricing === 'string') {
+        if (Array.isArray(productPricing)) {
+          pricing = productPricing as PricingInfo[];
+        } else if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
+          // Handles when pricing is a single object.
+          pricing = [productPricing as PricingInfo];
+        } else if (typeof productPricing === 'string') {
           try {
-            const parsed = JSON.parse(product.pricing);
+            const parsed = JSON.parse(productPricing);
             if (Array.isArray(parsed)) {
               pricing = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+              // Handles when pricing is a stringified single object.
+              pricing = [parsed as PricingInfo];
             }
           } catch (e) {
             console.error(`Failed to parse pricing for product ${product.id}:`, e);
