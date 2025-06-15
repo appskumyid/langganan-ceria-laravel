@@ -287,6 +287,45 @@ export type Database = {
         }
         Relationships: []
       }
+      managed_services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          duration: string | null
+          features: string[] | null
+          icon_name: string | null
+          id: string
+          name: string
+          pricing: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          features?: string[] | null
+          icon_name?: string | null
+          id?: string
+          name: string
+          pricing?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          features?: string[] | null
+          icon_name?: string | null
+          id?: string
+          name?: string
+          pricing?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_files: {
         Row: {
           created_at: string

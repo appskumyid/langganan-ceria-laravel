@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProducts from "./pages/AdminProducts";
+import AdminServices from "./pages/AdminServices";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -68,6 +69,16 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <AdminProducts />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/services" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminServices />
                 </Layout>
               </ProtectedRoute>
             } 

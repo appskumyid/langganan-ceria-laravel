@@ -2,153 +2,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Zap, Users, Headphones, Globe, Cog, MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import { NavLink } from "react-router-dom";
-
-interface Service {
-  id: number;
-  name: string;
-  description: string;
-  icon: any;
-  category: string;
-  features: string[];
-  pricing: string;
-  duration: string;
-}
-
-const servicesData: Service[] = [
-  // Security Services
-  {
-    id: 1,
-    name: "Cyber Security Audit",
-    description: "Audit keamanan komprehensif untuk sistem dan infrastruktur IT Anda",
-    icon: Shield,
-    category: "Security",
-    features: ["Vulnerability Assessment", "Penetration Testing", "Security Report", "Remediation Plan"],
-    pricing: "Mulai dari Rp 5.000.000",
-    duration: "2-4 minggu"
-  },
-  {
-    id: 2,
-    name: "Security Monitoring",
-    description: "Layanan monitoring keamanan 24/7 untuk deteksi dini ancaman",
-    icon: Shield,
-    category: "Security",
-    features: ["Real-time Monitoring", "Threat Detection", "Incident Response", "Monthly Reports"],
-    pricing: "Rp 2.500.000/bulan",
-    duration: "Ongoing"
-  },
-  {
-    id: 3,
-    name: "Data Protection Service",
-    description: "Layanan perlindungan data dan compliance dengan regulasi",
-    icon: Shield,
-    category: "Security",
-    features: ["Data Encryption", "Backup Solutions", "GDPR Compliance", "Access Control"],
-    pricing: "Rp 3.000.000/bulan",
-    duration: "Ongoing"
-  },
-
-  // Automation Services
-  {
-    id: 4,
-    name: "Business Process Automation",
-    description: "Otomatisasi proses bisnis untuk meningkatkan efisiensi operasional",
-    icon: Zap,
-    category: "Automation",
-    features: ["Process Analysis", "Workflow Design", "System Integration", "Training"],
-    pricing: "Mulai dari Rp 8.000.000",
-    duration: "4-8 minggu"
-  },
-  {
-    id: 5,
-    name: "DevOps Automation",
-    description: "Implementasi CI/CD pipeline dan infrastructure automation",
-    icon: Zap,
-    category: "Automation",
-    features: ["CI/CD Setup", "Infrastructure as Code", "Monitoring Setup", "Documentation"],
-    pricing: "Mulai dari Rp 6.000.000",
-    duration: "3-6 minggu"
-  },
-  {
-    id: 6,
-    name: "Marketing Automation",
-    description: "Otomatisasi campaign marketing dan customer engagement",
-    icon: Zap,
-    category: "Automation",
-    features: ["Email Automation", "Lead Scoring", "Campaign Management", "Analytics"],
-    pricing: "Mulai dari Rp 4.000.000",
-    duration: "2-4 minggu"
-  },
-
-  // Development Services
-  {
-    id: 7,
-    name: "Custom Web Development",
-    description: "Pengembangan aplikasi web custom sesuai kebutuhan bisnis",
-    icon: Globe,
-    category: "Development Aplikasi",
-    features: ["Full-stack Development", "Responsive Design", "API Integration", "Testing"],
-    pricing: "Mulai dari Rp 15.000.000",
-    duration: "8-16 minggu"
-  },
-  {
-    id: 8,
-    name: "Mobile App Development",
-    description: "Pengembangan aplikasi mobile iOS dan Android",
-    icon: Globe,
-    category: "Development Aplikasi",
-    features: ["Native Development", "Cross-platform", "App Store Deployment", "Maintenance"],
-    pricing: "Mulai dari Rp 25.000.000",
-    duration: "12-20 minggu"
-  },
-  {
-    id: 9,
-    name: "API Development",
-    description: "Pengembangan REST API dan microservices architecture",
-    icon: Globe,
-    category: "Development Aplikasi",
-    features: ["RESTful API", "Documentation", "Authentication", "Rate Limiting"],
-    pricing: "Mulai dari Rp 8.000.000",
-    duration: "4-8 minggu"
-  },
-
-  // Infrastructure Services
-  {
-    id: 10,
-    name: "Cloud Migration",
-    description: "Migrasi infrastruktur ke cloud dengan downtime minimal",
-    icon: Cog,
-    category: "Infrastructure",
-    features: ["Migration Planning", "Data Transfer", "Testing", "Go-live Support"],
-    pricing: "Mulai dari Rp 12.000.000",
-    duration: "6-12 minggu"
-  },
-  {
-    id: 11,
-    name: "Infrastructure Management",
-    description: "Pengelolaan infrastruktur IT dengan monitoring 24/7",
-    icon: Cog,
-    category: "Infrastructure",
-    features: ["Server Management", "Network Monitoring", "Backup Management", "Security Updates"],
-    pricing: "Rp 5.000.000/bulan",
-    duration: "Ongoing"
-  },
-  {
-    id: 12,
-    name: "Disaster Recovery",
-    description: "Implementasi solusi disaster recovery dan business continuity",
-    icon: Cog,
-    category: "Infrastructure",
-    features: ["DR Planning", "Backup Strategy", "Recovery Testing", "Documentation"],
-    pricing: "Mulai dari Rp 10.000.000",
-    duration: "4-8 minggu"
-  }
-];
-
-const categories = ["Security", "Automation", "Development Aplikasi", "Infrastructure"];
+import { useManagedServices } from "@/hooks/useManagedServices";
+import { getIcon } from "@/lib/iconMap";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Services = () => {
+  const { data: servicesData, isLoading, error } = useManagedServices();
+
   const handleConsultation = (serviceName: string) => {
     const message = `Halo, saya tertarik dengan layanan ${serviceName}. Bisa minta konsultasi lebih lanjut?`;
     const whatsappUrl = `https://wa.me/6287886425562?text=${encodeURIComponent(message)}`;
@@ -158,6 +20,8 @@ const Services = () => {
   const handleContact = (serviceName: string) => {
     console.log(`Contact for ${serviceName}`);
   };
+
+  const categories = servicesData ? [...new Set(servicesData.map(s => s.category))] : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -217,7 +81,41 @@ const Services = () => {
 
       {/* Services by Category */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {categories.map((category) => {
+        {isLoading && Array.from({ length: 4 }).map((_, i) => (
+            <section key={i} className="mb-16">
+                 <div className="mb-8">
+                    <Skeleton className="h-8 w-1/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 3 }).map((_, j) => (
+                        <Card key={j}>
+                            <CardHeader>
+                                <Skeleton className="h-8 w-8 rounded-lg" />
+                                <Skeleton className="h-6 w-3/4 mt-2" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full mt-2" />
+                                <Skeleton className="h-4 w-2/3 mt-2" />
+                                <div className="mt-4">
+                                    <Skeleton className="h-6 w-1/2" />
+                                    <Skeleton className="h-4 w-1/3 mt-1" />
+                                </div>
+                                <div className="mt-6 space-y-2">
+                                    <Skeleton className="h-10 w-full" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </section>
+        ))}
+
+        {error && <div>Error fetching services: {error.message}</div>}
+
+        {!isLoading && !error && categories.map((category) => {
           const categoryServices = servicesData.filter(service => service.category === category);
           
           if (categoryServices.length === 0) return null;
@@ -235,7 +133,7 @@ const Services = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryServices.map((service) => {
-                  const IconComponent = service.icon;
+                  const IconComponent = getIcon(service.icon_name);
                   return (
                     <Card key={service.id} className="hover:shadow-lg transition-shadow">
                       <CardHeader>
@@ -255,17 +153,19 @@ const Services = () => {
                           <div className="text-sm text-gray-500">Durasi: {service.duration}</div>
                         </div>
 
-                        <div className="mb-6">
-                          <h4 className="font-semibold mb-2">Yang Anda Dapatkan:</h4>
-                          <ul className="space-y-1">
-                            {service.features.map((feature, index) => (
-                              <li key={index} className="text-sm text-gray-600 flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                                {feature}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                        {service.features && service.features.length > 0 && (
+                          <div className="mb-6">
+                            <h4 className="font-semibold mb-2">Yang Anda Dapatkan:</h4>
+                            <ul className="space-y-1">
+                              {service.features.map((feature, index) => (
+                                <li key={index} className="text-sm text-gray-600 flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                                  {feature}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <Button 
