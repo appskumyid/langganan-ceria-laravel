@@ -5,18 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, MessageCircle, Play, Crown } from "lucide-react";
 
-type Product = Tables<'products'>;
+type Product = Tables<'managed_products'>;
 
 interface ProductCardProps {
   product: Product;
   onSubscribe: (product: Product) => void;
   onDemo: (demoUrl: string | null) => void;
-  onDetail: (productId: number) => void;
+  onDetail: (productId: string) => void;
   onWhatsApp: (productName: string) => void;
 }
 
 const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: ProductCardProps) => {
-  const rawPrice = product.price ? String(product.price) : '0';
+  const pricing = product.pricing as { monthly?: string };
+  const monthlyPrice = pricing?.monthly;
+  const rawPrice = monthlyPrice ? String(monthlyPrice) : '0';
   const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
 
   return (
@@ -51,8 +53,8 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
           <span className="text-2xl font-bold text-primary">
             {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}` : 'Hubungi kami'}
           </span>
-          {displayPrice > 0 && product.period && (
-            <span className="text-gray-500">{product.period}</span>
+          {displayPrice > 0 && (
+            <span className="text-sm text-muted-foreground ml-1">/bulan</span>
           )}
         </div>
 

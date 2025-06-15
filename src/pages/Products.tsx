@@ -17,13 +17,13 @@ import ProductCard from "@/components/ProductCard";
 import { ProductSearch, CategoryTabs } from "@/components/ProductFilters";
 import { ProductPagination } from "@/components/ProductPagination";
 
-type Product = Tables<'products'>;
+type Product = Tables<'managed_products'>;
 
 const PRODUCTS_PER_PAGE = 9;
 
 const fetchProducts = async (page: number, searchTerm: string, category: string): Promise<{ products: Product[], count: number | null }> => {
   let query = supabase
-    .from('products')
+    .from('managed_products')
     .select('*', { count: 'exact' });
 
   if (searchTerm) {
@@ -38,7 +38,7 @@ const fetchProducts = async (page: number, searchTerm: string, category: string)
   const to = from + PRODUCTS_PER_PAGE - 1;
 
   query = query
-    .order('id', { ascending: true })
+    .order('created_at', { ascending: false })
     .range(from, to);
 
   const { data, error, count } = await query;
@@ -88,7 +88,7 @@ const Products = () => {
   };
 
   const { data, isLoading, isError, error: queryError } = useQuery({
-    queryKey: ['products', activeCategory, debouncedSearchTerm, currentPage],
+    queryKey: ['managed_products_public', activeCategory, debouncedSearchTerm, currentPage],
     queryFn: () => fetchProducts(currentPage, debouncedSearchTerm, activeCategory),
     placeholderData: (previousData) => previousData,
   });
@@ -117,7 +117,7 @@ const Products = () => {
     }
   };
 
-  const handleDetail = (productId: number) => {
+  const handleDetail = (productId: string) => {
     console.log(`View detail for product ${productId}`);
   };
 
@@ -217,10 +217,10 @@ const Products = () => {
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           product={{
-            id: selectedProduct.id,
+            id: 0, // Using placeholder ID due to system limitations
             name: selectedProduct.name,
-            price: selectedProduct.price,
-            period: selectedProduct.period,
+            price: (selectedProduct.pricing as any)?.monthly || '0',
+            period: (selectedProduct.pricing as any)?.monthly ? '/bulan' : '',
             category: selectedProduct.category,
             type: selectedProduct.type,
           }}
