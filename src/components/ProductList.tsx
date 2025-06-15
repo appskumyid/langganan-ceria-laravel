@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,11 +102,11 @@ const ProductList = () => {
           }
         }
 
-        const monthlyPriceInfo = pricing.find(p => p.period === 'monthly');
+        const monthlyPriceInfo = pricing.find(p => p && typeof p.period === 'string' && p.period.toLowerCase() === 'monthly');
         const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
         
-        const rawPrice = displayPriceInfo ? displayPriceInfo.price : '0';
-        const displayPrice = Number(String(rawPrice).replace(/[^0-9]/g, ''));
+        const rawPrice = displayPriceInfo && displayPriceInfo.price ? String(displayPriceInfo.price) : '0';
+        const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
         
         return (
           <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
@@ -137,9 +138,9 @@ const ProductList = () => {
               
               <div className="mb-4">
                 <span className="text-2xl font-bold text-primary">Rp{displayPrice.toLocaleString('id-ID')}</span>
-                {displayPriceInfo && (
+                {displayPriceInfo && displayPriceInfo.period && (
                   <span className="text-sm text-muted-foreground">
-                    /{displayPriceInfo.period === 'monthly' ? 'bulan' : 'tahun'}
+                    /{String(displayPriceInfo.period).toLowerCase() === 'monthly' ? 'bulan' : 'tahun'}
                   </span>
                 )}
               </div>
@@ -199,3 +200,4 @@ const ProductList = () => {
 };
 
 export default ProductList;
+
