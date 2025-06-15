@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useForm } from 'react-hook-form';
-import { Loader2, Plus, Edit, Trash2, Shield, FileText, Eye } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Shield, FileText, Eye, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { ProductPagination } from '@/components/ProductPagination';
@@ -231,6 +231,27 @@ const AdminProducts = () => {
             Anda tidak memiliki akses ke halaman admin. Hanya admin yang dapat mengakses halaman ini.
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  if (previewingProduct) {
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <div className="mb-4">
+          <Button variant="outline" onClick={() => setPreviewingProduct(null)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Kembali ke Daftar Produk
+          </Button>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Pratinjau Produk: {previewingProduct.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[calc(100vh-250px)]">
+            <ProductPreviewer product={previewingProduct} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -617,16 +638,6 @@ const AdminProducts = () => {
             <DialogTitle>Kelola File Produk</DialogTitle>
           </DialogHeader>
           {managingFilesFor && <ProductFileManager product={managingFilesFor} />}
-        </DialogContent>
-      </Dialog>
-      <Dialog open={!!previewingProduct} onOpenChange={(isOpen) => !isOpen && setPreviewingProduct(null)}>
-        <DialogContent className="max-w-7xl w-full h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Pratinjau Produk: {previewingProduct?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="h-[calc(90vh-100px)]">
-            {previewingProduct && <ProductPreviewer product={previewingProduct} />}
-          </div>
         </DialogContent>
       </Dialog>
     </div>

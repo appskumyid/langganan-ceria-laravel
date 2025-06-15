@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState, useMemo } from 'react';
@@ -82,7 +81,7 @@ export const ProductPreviewer = ({ product }: ProductPreviewerProps) => {
   const srcDocContent = (activeFile?.html_content || '') + injectedScript;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-4 h-full pt-4">
+    <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-4 h-full">
       <div className="border rounded-md p-2 overflow-y-auto bg-slate-50">
         <h4 className="font-semibold mb-2 p-2">Daftar File</h4>
         <ul className="space-y-1">
