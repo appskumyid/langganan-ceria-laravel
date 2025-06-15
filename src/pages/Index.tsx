@@ -26,21 +26,41 @@ const Index = () => {
 
       setLoadingStats(true);
       try {
-        // Fetch profiles with roles
-        const { data: profilesWithRoles, error: profilesError } = await supabase
+        // Fetch profiles
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select(`id, user_roles(role)`);
+          .select('id');
         
         if (profilesError) throw profilesError;
+
+        // Fetch user roles separately
+        const profilesWithRoles = await Promise.all(
+          (profiles || []).map(async (profile) => {
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', profile.id);
+
+            if (roleError) {
+              console.error(`Error fetching role for user ${profile.id}`, roleError);
+              return { ...profile, user_roles: [] };
+            }
+
+            return {
+              ...profile,
+              user_roles: (roleData as { role: string }[]) || []
+            };
+          })
+        );
 
         let totalAdmins = 0;
         let totalMembers = 0;
 
         profilesWithRoles.forEach(profile => {
-          if (profile.user_roles.some((r: any) => r.role === 'admin')) {
+          if (profile.user_roles.some(r => r.role === 'admin')) {
             totalAdmins++;
           }
-          if (profile.user_roles.some((r: any) => r.role === 'member')) {
+          if (profile.user_roles.some(r => r.role === 'member')) {
             totalMembers++;
           }
         });
