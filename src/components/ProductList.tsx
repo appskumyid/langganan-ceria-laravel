@@ -80,9 +80,23 @@ const ProductList = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {productsData.map((product) => {
-        const pricing = product.pricing as PricingInfo[] | null;
-        const monthlyPriceInfo = pricing?.find(p => p.period === 'monthly');
-        const displayPriceInfo = monthlyPriceInfo || (pricing && pricing.length > 0 ? pricing[0] : null);
+        let pricing: PricingInfo[] = [];
+
+        if (Array.isArray(product.pricing)) {
+          pricing = product.pricing as PricingInfo[];
+        } else if (typeof product.pricing === 'string') {
+          try {
+            const parsed = JSON.parse(product.pricing);
+            if (Array.isArray(parsed)) {
+              pricing = parsed;
+            }
+          } catch (e) {
+            console.error(`Failed to parse pricing for product ${product.id}:`, e);
+          }
+        }
+
+        const monthlyPriceInfo = pricing.find(p => p.period === 'monthly');
+        const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
         const displayPrice = displayPriceInfo ? Number(displayPriceInfo.price) : 0;
         
         return (
