@@ -9,7 +9,7 @@ import type { Tables, Json } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Product = Tables<'managed_products'>;
-type PricingInfo = { period: 'monthly' | 'annually' | string; price: string };
+type PricingInfo = { period: string; price: string };
 
 const fetchHomepageProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
@@ -83,19 +83,29 @@ const ProductList = () => {
         let pricing: PricingInfo[] = [];
         const productPricing = product.pricing;
 
-        if (Array.isArray(productPricing)) {
-          pricing = productPricing as PricingInfo[];
-        } else if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
-          // Handles when pricing is a single object.
-          pricing = [productPricing as PricingInfo];
+        if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
+          // Handles when pricing is an object like { monthly: '100', yearly: '1000' }
+          pricing = Object.entries(productPricing)
+            .filter(([, price]) => price != null && String(price).trim() !== '')
+            .map(([period, price]) => ({
+              period: String(period),
+              price: String(price),
+            }));
+        } else if (Array.isArray(productPricing)) {
+          // Legacy support for array format if any
+          pricing = (productPricing as any[]).filter(p => p && p.price != null && String(p.price).trim() !== '');
         } else if (typeof productPricing === 'string') {
           try {
             const parsed = JSON.parse(productPricing);
             if (Array.isArray(parsed)) {
-              pricing = parsed;
+              pricing = parsed.filter(p => p && p.price != null && String(p.price).trim() !== '');
             } else if (parsed && typeof parsed === 'object') {
-              // Handles when pricing is a stringified single object.
-              pricing = [parsed as PricingInfo];
+              pricing = Object.entries(parsed)
+                .filter(([, price]) => price != null && String(price).trim() !== '')
+                .map(([period, price]) => ({
+                  period: String(period),
+                  price: String(price),
+                }));
             }
           } catch (e) {
             console.error(`Failed to parse pricing for product ${product.id}:`, e);
@@ -103,10 +113,23 @@ const ProductList = () => {
         }
 
         const monthlyPriceInfo = pricing.find(p => p && typeof p.period === 'string' && p.period.toLowerCase() === 'monthly');
+        
+        // Prioritize monthly price, but fall back to the first available price.
         const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
         
         const rawPrice = displayPriceInfo && displayPriceInfo.price ? String(displayPriceInfo.price) : '0';
         const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
+
+        const getPeriodText = (period?: string) => {
+          if (!period) return '';
+          switch (period.toLowerCase()) {
+            case 'monthly': return '/bulan';
+            case 'quarterly': return '/3 bulan';
+            case 'semiannual': return '/6 bulan';
+            case 'yearly': return '/tahun';
+            default: return `/${period}`;
+          }
+        };
         
         return (
           <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
@@ -137,10 +160,12 @@ const ProductList = () => {
               <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
               
               <div className="mb-4">
-                <span className="text-2xl font-bold text-primary">Rp{displayPrice.toLocaleString('id-ID')}</span>
-                {displayPriceInfo && displayPriceInfo.period && (
+                <span className="text-2xl font-bold text-primary">
+                  {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}`: 'Hubungi kami'}
+                </span>
+                {displayPrice > 0 && displayPriceInfo && displayPriceInfo.period && (
                   <span className="text-sm text-muted-foreground">
-                    /{String(displayPriceInfo.period).toLowerCase() === 'monthly' ? 'bulan' : 'tahun'}
+                    {getPeriodText(displayPriceInfo.period)}
                   </span>
                 )}
               </div>
@@ -200,4 +225,3 @@ const ProductList = () => {
 };
 
 export default ProductList;
-
