@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Tables, Json } from '@/integrations/supabase/types';
 import { ProductFileManager } from '@/components/ProductFileManager';
 import { ProductPreviewer } from '@/components/ProductPreviewer';
+import { ProductSearch } from '@/components/ProductFilters';
 
 interface PricingPeriod {
   monthly: string;
@@ -61,6 +62,8 @@ const AdminProducts = () => {
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(20);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const form = useForm<ProductFormData>({
@@ -79,15 +82,32 @@ const AdminProducts = () => {
     }
   });
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to first page on search
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
   const { data: productsData, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['managed_products', currentPage, productsPerPage],
+    queryKey: ['managed_products', currentPage, productsPerPage, debouncedSearchTerm],
     queryFn: async () => {
       const from = (currentPage - 1) * productsPerPage;
       const to = from + productsPerPage - 1;
 
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('managed_products')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' });
+
+      if (debouncedSearchTerm) {
+        query = query.ilike('name', `%${debouncedSearchTerm}%`);
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -258,6 +278,10 @@ const AdminProducts = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
+      <div className="mb-4">
+        <ProductSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
+      </div>
+
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
