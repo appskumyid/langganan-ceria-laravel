@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +103,9 @@ const ProductList = () => {
 
         const monthlyPriceInfo = pricing.find(p => p.period === 'monthly');
         const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
-        const displayPrice = displayPriceInfo ? Number(displayPriceInfo.price) : 0;
+        
+        const rawPrice = displayPriceInfo ? displayPriceInfo.price : '0';
+        const displayPrice = Number(String(rawPrice).replace(/[^0-9]/g, ''));
         
         return (
           <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
