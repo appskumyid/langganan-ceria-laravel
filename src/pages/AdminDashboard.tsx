@@ -1,13 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Shield } from 'lucide-react';
+import { Loader2, Users, Shield, Eye } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AdminSubscriptions from '@/components/AdminSubscriptions';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 interface UserRole {
   role: string;
@@ -164,6 +165,7 @@ const AdminDashboard = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Tanggal Registrasi</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -188,6 +190,14 @@ const AdminDashboard = () => {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/admin/users/${member.id}`}>
+                            <Eye className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Detail</span>
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

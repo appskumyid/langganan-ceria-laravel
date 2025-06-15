@@ -19,6 +19,7 @@ import Layout from "./components/Layout";
 import MySubscriptions from "./pages/MySubscriptions"; // Import baru
 import AdminSubscriptionDetail from './pages/AdminSubscriptionDetail';
 import SubscriptionDetail from './pages/SubscriptionDetail';
+import AdminUserDetail from "./pages/AdminUserDetail";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,16 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <AdminSubscriptionDetail />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/users/:userId" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminUserDetail />
                 </Layout>
               </ProtectedRoute>
             } 
