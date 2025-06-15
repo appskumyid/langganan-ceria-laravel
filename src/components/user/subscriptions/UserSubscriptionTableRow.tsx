@@ -32,18 +32,11 @@ export const UserSubscriptionTableRow = ({ subscription }: UserSubscriptionTable
                     </Button>
                 );
             case 'active':
-                if (subscription.product_category === 'E-Commerce' && subscription.product_type === 'Non-Premium') {
-                    return (
-                        <Button asChild variant="outline" size="sm">
-                            <Link to={`/my-subscriptions/${subscription.id}/edit-store`}>
-                                Kelola <ArrowRight className="ml-2 h-4 w-4" />
-                            </Link>
-                        </Button>
-                    );
-                }
                 return (
-                    <Button variant="outline" size="sm" disabled>
-                        Detail (Segera Hadir)
+                    <Button asChild variant="outline" size="sm">
+                        <Link to={`/my-subscriptions/${subscription.id}`}>
+                            Detail <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
                     </Button>
                 );
             default:
