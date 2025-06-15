@@ -15,7 +15,11 @@ interface ProductCardProps {
   onWhatsApp: (productName: string) => void;
 }
 
-const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: ProductCardProps) => (
+const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: ProductCardProps) => {
+  const rawPrice = product.price ? String(product.price) : '0';
+  const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
+
+  return (
     <Card className="hover:shadow-lg transition-shadow flex flex-col">
       <CardHeader className="p-0">
         <div className="relative">
@@ -44,8 +48,12 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
         <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
         
         <div className="mb-4">
-          <span className="text-2xl font-bold text-primary">{product.price}</span>
-          <span className="text-gray-500">{product.period}</span>
+          <span className="text-2xl font-bold text-primary">
+            {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}` : 'Hubungi kami'}
+          </span>
+          {displayPrice > 0 && product.period && (
+            <span className="text-gray-500">{product.period}</span>
+          )}
         </div>
 
         <div className="mb-4">
@@ -96,12 +104,13 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
               className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
             >
               <MessageCircle className="h-3 w-3" />
-              WA
+              WhatsApp
             </Button>
           </div>
         </div>
       </CardContent>
     </Card>
-);
+  );
+}
 
 export default ProductCard;
