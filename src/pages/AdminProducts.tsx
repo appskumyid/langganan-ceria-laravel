@@ -11,13 +11,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useForm } from 'react-hook-form';
-import { Loader2, Plus, Edit, Trash2, Shield } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Shield, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { ProductPagination } from '@/components/ProductPagination';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Tables, Json } from '@/integrations/supabase/types';
+import { ProductFileManager } from '@/components/ProductFileManager';
 
 interface PricingPeriod {
   monthly: string;
@@ -54,6 +55,7 @@ const AdminProducts = () => {
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [managingFilesFor, setManagingFilesFor] = useState<Product | null>(null);
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(20);
@@ -200,6 +202,10 @@ const AdminProducts = () => {
     setEditingProduct(null);
     form.reset();
     setIsDialogOpen(true);
+  };
+
+  const handleManageFiles = (product: Product) => {
+    setManagingFilesFor(product);
   };
 
   if (roleLoading || (isAdmin && isLoadingProducts)) {
@@ -554,6 +560,13 @@ const AdminProducts = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleManageFiles(product)}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleEdit(product)}
                       >
                         <Edit className="h-4 w-4" />
@@ -584,6 +597,14 @@ const AdminProducts = () => {
           />
         </div>
       )}
+      <Dialog open={!!managingFilesFor} onOpenChange={(isOpen) => !isOpen && setManagingFilesFor(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Kelola File Produk</DialogTitle>
+          </DialogHeader>
+          {managingFilesFor && <ProductFileManager product={managingFilesFor} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -266,6 +266,41 @@ export type Database = {
         }
         Relationships: []
       }
+      product_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          html_content: string | null
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          html_content?: string | null
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          html_content?: string | null
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_files_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "managed_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
