@@ -1,9 +1,10 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
-import SubscriptionsTable from '@/components/SubscriptionsTable';
+import { UserSubscriptionsTable } from '@/components/user/subscriptions/UserSubscriptionsTable';
 
 const MySubscriptions = () => {
   const { user } = useAuth();
@@ -27,7 +28,7 @@ const MySubscriptions = () => {
           .from('user_subscriptions')
           .select('*')
           .eq('user_id', user.id)
-          .order('subscribed_at', { ascending: false });
+          .order('created_at', { ascending: false });
 
         if (dbError) {
           throw dbError;
@@ -71,7 +72,7 @@ const MySubscriptions = () => {
           <p className="text-gray-600">Anda belum memiliki langganan.</p>
         </div>
       ) : (
-        <SubscriptionsTable subscriptions={subscriptions} />
+        <UserSubscriptionsTable subscriptions={subscriptions} />
       )}
     </div>
   );

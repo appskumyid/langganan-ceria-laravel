@@ -1,34 +1,16 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
-import type { VariantProps } from "class-variance-authority";
+import { getStatusVariant } from "./admin/subscriptions/utils";
 
 interface SubscribedProductCardProps {
   subscription: Tables<'user_subscriptions'>;
 }
 
 const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => {
-  const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'pending_payment':
-        return 'warning';
-      case 'waiting_confirmation':
-        return 'info';
-      case 'expired':
-        return 'destructive';
-      case 'cancelled':
-        return 'secondary';
-      default:
-        return 'default';
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
