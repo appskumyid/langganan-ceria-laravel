@@ -16,7 +16,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: ProductCardProps) => (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow flex flex-col">
       <CardHeader className="p-0">
         <div className="relative">
           <img
@@ -26,8 +26,12 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
           />
           <div className="absolute top-4 right-4 flex gap-2">
             <Badge 
-              variant={product.type === "Premium" ? "default" : "secondary"}
-              className={product.type === "Premium" ? "bg-yellow-500 text-white" : ""}
+              variant="default"
+              className={
+                product.type === "Premium" 
+                ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-500/90" 
+                : "bg-gray-900/75 text-white border-transparent hover:bg-gray-900/85"
+              }
             >
               {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
               {product.type}
@@ -35,7 +39,7 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-6 flex flex-col flex-grow">
         <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
         <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
         
@@ -55,7 +59,7 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 mt-auto">
           <Button 
             className="w-full" 
             onClick={() => onSubscribe(product)}
