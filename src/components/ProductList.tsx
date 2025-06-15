@@ -1,28 +1,30 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, MessageCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Json } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type Product = Tables<'store_products'>;
+type Product = Tables<'managed_products'>;
+type PricingInfo = { period: 'monthly' | 'annually' | string; price: string };
 
 const fetchHomepageProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
-    .rpc('get_random_store_products', { limit_count: 3 });
+    .rpc('get_random_managed_products', { limit_count: 3 });
 
   if (error) {
     console.error("Error fetching homepage products:", error);
     throw new Error(error.message);
   }
-  return data || [];
+  return (data as any) || [];
 };
 
 const ProductList = () => {
   const { data: productsData, isLoading, isError } = useQuery({
-    queryKey: ['homepageStoreProducts'],
+    queryKey: ['homepageManagedProducts'],
     queryFn: fetchHomepageProducts,
   });
 
@@ -71,60 +73,71 @@ const ProductList = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {productsData.map((product) => (
-        <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
-          <CardHeader className="p-0">
-            <img
-              src={product.image_url || '/placeholder.svg'}
-              alt={product.name}
-              className="w-full h-48 object-cover rounded-t-lg"
-            />
-          </CardHeader>
-          <CardContent className="p-6 flex flex-col flex-grow">
-            <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
-            <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
-            
-            <div className="mb-4">
-              <span className="text-2xl font-bold text-primary">Rp{product.price.toLocaleString('id-ID')}</span>
-            </div>
-
-            {product.category && (
+      {productsData.map((product) => {
+        const pricing = product.pricing as PricingInfo[] | null;
+        const displayPriceInfo = pricing && pricing.length > 0 ? pricing[0] : null;
+        const displayPrice = displayPriceInfo ? Number(displayPriceInfo.price) : 0;
+        
+        return (
+          <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
+            <CardHeader className="p-0">
+              <img
+                src={product.image_url || '/placeholder.svg'}
+                alt={product.name}
+                className="w-full h-48 object-cover rounded-t-lg"
+              />
+            </CardHeader>
+            <CardContent className="p-6 flex flex-col flex-grow">
+              <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
+              <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
+              
               <div className="mb-4">
-                <h4 className="font-semibold mb-2">Kategori:</h4>
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {product.category}
-                  </Badge>
+                <span className="text-2xl font-bold text-primary">Rp{displayPrice.toLocaleString('id-ID')}</span>
+                {displayPriceInfo && (
+                  <span className="text-sm text-muted-foreground">
+                    /{displayPriceInfo.period === 'monthly' ? 'bulan' : 'tahun'}
+                  </span>
+                )}
+              </div>
+
+              {product.category && (
+                <div className="mb-4">
+                  <h4 className="font-semibold mb-2">Kategori:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 mt-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDetail(product.id)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Detail
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleWhatsApp(product.name)}
+                    className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
+                  >
+                    <MessageCircle className="h-3 w-3" />
+                    WhatsApp
+                  </Button>
                 </div>
               </div>
-            )}
-
-            <div className="space-y-2 mt-auto">
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDetail(product.id)}
-                  className="flex items-center gap-1"
-                >
-                  <Eye className="h-3 w-3" />
-                  Detail
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleWhatsApp(product.name)}
-                  className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  <MessageCircle className="h-3 w-3" />
-                  WhatsApp
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

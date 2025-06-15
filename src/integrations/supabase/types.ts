@@ -650,6 +650,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_random_managed_products: {
+        Args: { limit_count: number }
+        Returns: {
+          category: string
+          created_at: string
+          demo_url: string | null
+          description: string | null
+          features: string[] | null
+          id: string
+          image_url: string | null
+          name: string
+          pricing: Json
+          type: Database["public"]["Enums"]["product_type_enum"]
+          updated_at: string
+        }[]
+      }
       get_random_store_products: {
         Args: { limit_count: number }
         Returns: {
