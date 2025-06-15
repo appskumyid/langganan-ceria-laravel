@@ -1,6 +1,5 @@
 
-import { useState } from "react"
-import { Home, Users, Package, Settings, LogOut, ListChecks } from "lucide-react"
+import { Home, Users, Package, LogOut, ListChecks } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserRole } from "@/hooks/useUserRole"
@@ -18,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void }) {
+export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
@@ -39,8 +38,6 @@ export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void })
 
   const items = isAdmin ? adminItems : memberItems
 
-  const isActive = (path: string) => currentPath === path
-  const isExpanded = items.some((i) => isActive(i.url))
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
 
@@ -71,14 +68,6 @@ export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void })
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={onSettingsClick}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    {state !== "collapsed" && <span>Pengaturan</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
