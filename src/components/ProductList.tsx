@@ -3,48 +3,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, MessageCircle, Play } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const productsData = [
-  {
-    id: 1,
-    name: "Paket Basic",
-    description: "Paket langganan dasar dengan fitur lengkap untuk bisnis kecil",
-    price: "Rp 99.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    features: ["5 User", "10GB Storage", "Email Support", "Basic Analytics"],
-    demoUrl: "https://demo.example.com/basic"
-  },
-  {
-    id: 2,
-    name: "Paket Professional",
-    description: "Paket untuk bisnis menengah dengan fitur advanced",
-    price: "Rp 199.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    features: ["25 User", "100GB Storage", "Priority Support", "Advanced Analytics", "API Access"],
-    demoUrl: "https://demo.example.com/professional"
-  },
-  {
-    id: 3,
-    name: "Paket Enterprise",
-    description: "Solusi lengkap untuk perusahaan besar",
-    price: "Rp 499.000",
-    period: "/bulan",
-    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    features: ["Unlimited User", "1TB Storage", "24/7 Support", "Custom Analytics", "Full API", "Dedicated Manager"],
-    demoUrl: "https://demo.example.com/enterprise"
+type Product = Tables<'products'>;
+
+const fetchHomepageProducts = async (): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .limit(3)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching homepage products:", error);
+    throw new Error(error.message);
   }
-];
+  return data || [];
+};
 
 const ProductList = () => {
+  const { data: productsData, isLoading, isError } = useQuery({
+    queryKey: ['homepageProducts'],
+    queryFn: fetchHomepageProducts,
+  });
+
   const handleSubscribe = (productName: string) => {
     // Handle subscription logic
     console.log(`Subscribe to ${productName}`);
   };
 
-  const handleDemo = (demoUrl: string) => {
-    window.open(demoUrl, '_blank');
+  const handleDemo = (demoUrl: string | null) => {
+    if (demoUrl) {
+      window.open(demoUrl, '_blank');
+    }
   };
 
   const handleDetail = (productId: number) => {
@@ -58,20 +52,54 @@ const ProductList = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <Skeleton className="w-full h-48 rounded-t-lg" />
+            <CardContent className="p-6 space-y-4">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-8 w-1/2" />
+              <div className="space-y-2 pt-2">
+                <Skeleton className="h-10 w-full" />
+                <div className="grid grid-cols-3 gap-2">
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (isError || !productsData) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="text-lg">Gagal memuat produk.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {productsData.map((product) => (
-        <Card key={product.id} className="hover:shadow-lg transition-shadow">
+        <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
           <CardHeader className="p-0">
             <img
-              src={product.image}
+              src={product.image_url || '/placeholder.svg'}
               alt={product.name}
               className="w-full h-48 object-cover rounded-t-lg"
             />
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-6 flex flex-col flex-grow">
             <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
-            <p className="text-gray-600 mb-4">{product.description}</p>
+            <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
             
             <div className="mb-4">
               <span className="text-2xl font-bold text-primary">{product.price}</span>
@@ -81,7 +109,7 @@ const ProductList = () => {
             <div className="mb-4">
               <h4 className="font-semibold mb-2">Fitur:</h4>
               <div className="flex flex-wrap gap-1">
-                {product.features.map((feature, index) => (
+                {product.features?.map((feature, index) => (
                   <Badge key={index} variant="secondary" className="text-xs">
                     {feature}
                   </Badge>
@@ -89,7 +117,7 @@ const ProductList = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 mt-auto">
               <Button 
                 className="w-full" 
                 onClick={() => handleSubscribe(product.name)}
@@ -101,7 +129,8 @@ const ProductList = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleDemo(product.demoUrl)}
+                  onClick={() => handleDemo(product.demo_url)}
+                  disabled={!product.demo_url}
                   className="flex items-center gap-1"
                 >
                   <Play className="h-3 w-3" />
