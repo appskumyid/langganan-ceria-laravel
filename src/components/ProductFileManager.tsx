@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ProductPreviewer } from './ProductPreviewer';
 
 type Product = Tables<'managed_products'>;
 type ProductFile = Tables<'product_files'>;
@@ -35,6 +36,7 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<ProductFile | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
   const form = useForm<ProductFileFormData>({
     defaultValues: {
@@ -142,72 +144,91 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">File untuk: {product.name}</h3>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah File
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>{editingFile ? 'Edit File' : 'Tambah File Baru'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid md:grid-cols-2 gap-6 flex-grow min-h-0 py-4">
-                <div className="space-y-4 flex flex-col">
-                  <FormField
-                    control={form.control}
-                    name="file_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nama File</FormLabel>
-                        <FormControl>
-                          <Input placeholder="contoh: index.html" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="html_content"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col flex-grow">
-                        <FormLabel>Konten HTML</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="&lt;p&gt;Hello World&lt;/p&gt;" {...field} className="min-h-[300px] flex-grow" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={upsertFileMutation.isPending}>
-                      Batal
-                    </Button>
-                    <Button type="submit" disabled={upsertFileMutation.isPending}>
-                      {upsertFileMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {editingFile ? 'Perbarui' : 'Simpan'}
-                    </Button>
-                  </div>
-                </div>
+        <div className="flex items-center space-x-2">
+          <Dialog open={isPreviewing} onOpenChange={setIsPreviewing}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Eye className="h-4 w-4 mr-2" />
+                Pratinjau Produk
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-7xl w-full h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>Pratinjau Produk: {product.name}</DialogTitle>
+              </DialogHeader>
+              <div className="h-[calc(90vh-100px)]">
+                <ProductPreviewer product={product} />
+              </div>
+            </DialogContent>
+          </Dialog>
 
-                <div className="flex flex-col h-full">
-                  <FormLabel>Preview</FormLabel>
-                  <div className="border rounded-md mt-2 flex-grow bg-white">
-                    <iframe
-                      srcDoc={htmlContent || ''}
-                      title="HTML Preview"
-                      className="w-full h-full border-0"
-                      sandbox="allow-scripts"
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddNew}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah File
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>{editingFile ? 'Edit File' : 'Tambah File Baru'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid md:grid-cols-2 gap-6 flex-grow min-h-0 py-4">
+                  <div className="space-y-4 flex flex-col">
+                    <FormField
+                      control={form.control}
+                      name="file_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nama File</FormLabel>
+                          <FormControl>
+                            <Input placeholder="contoh: index.html" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="html_content"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col flex-grow">
+                          <FormLabel>Konten HTML</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="&lt;p&gt;Hello World&lt;/p&gt;" {...field} className="min-h-[300px] flex-grow" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={upsertFileMutation.isPending}>
+                        Batal
+                      </Button>
+                      <Button type="submit" disabled={upsertFileMutation.isPending}>
+                        {upsertFileMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {editingFile ? 'Perbarui' : 'Simpan'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+
+                  <div className="flex flex-col h-full">
+                    <FormLabel>Preview</FormLabel>
+                    <div className="border rounded-md mt-2 flex-grow bg-white">
+                      <iframe
+                        srcDoc={htmlContent || ''}
+                        title="HTML Preview"
+                        className="w-full h-full border-0"
+                        sandbox="allow-scripts"
+                      />
+                    </div>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {isLoadingFiles ? (
@@ -230,9 +251,6 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
                 <TableCell>{new Date(file.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex space-x-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => handlePreviewFile(file)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(file)}>
                       <Edit className="h-4 w-4" />
                     </Button>
