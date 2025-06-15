@@ -76,6 +76,16 @@ const Payment = () => {
         .eq('id', subscription.id);
 
       if (error) throw error;
+
+      // Invoke mailchimp sync, but don't block the user flow
+      supabase.functions.invoke('mailchimp-sync', {
+        body: { subscription_id: subscription.id }
+      }).then(({ error: funcError }) => {
+        if (funcError) {
+          // Log silently, as the main action was successful.
+          console.warn("Mailchimp sync failed on user confirmation:", funcError.message);
+        }
+      });
       
       toast({
         title: "Konfirmasi Terkirim",
@@ -83,7 +93,7 @@ const Payment = () => {
       });
       navigate("/my-subscriptions");
     } catch (error: any) {
-       toast({
+      toast({
         title: "Gagal Mengkonfirmasi",
         description: error.message || "Terjadi kesalahan. Silakan coba lagi.",
         variant: "destructive"

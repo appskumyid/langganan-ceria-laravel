@@ -103,10 +103,22 @@ const AdminSubscriptions = () => {
 
   const mutation = useMutation({
     mutationFn: updateSubscriptionStatus,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['allSubscriptions'] });
       toast({ title: 'Sukses', description: 'Status langganan berhasil diperbarui.' });
       setSelectedSub(null);
+
+      // Invoke sync function after successful status update
+      supabase.functions.invoke('mailchimp-sync', {
+        body: { subscription_id: variables.id }
+      }).then(({ error }) => {
+        if (error) {
+            console.error("Mailchimp sync failed:", error.message);
+            toast({ title: 'Peringatan', description: `Sinkronisasi ke Mailchimp gagal: ${error.message}`, variant: 'destructive' });
+        } else {
+            toast({ title: 'Sinkronisasi Berhasil', description: 'Data pelanggan berhasil disinkronkan ke Mailchimp.' });
+        }
+      });
     },
     onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
