@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Home, Users, Package, Settings, LogOut, ListChecks } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
@@ -17,7 +18,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-export function AppSidebar() {
+export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { state } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
@@ -70,6 +71,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={onSettingsClick}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    {state !== "collapsed" && <span>Pengaturan</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
