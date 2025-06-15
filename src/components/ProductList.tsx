@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MessageCircle } from "lucide-react";
+import { Eye, MessageCircle, Play, Crown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Json } from "@/integrations/supabase/types";
@@ -37,6 +36,12 @@ const ProductList = () => {
     const message = `Halo, saya tertarik dengan ${productName}. Bisa minta informasi lebih lanjut?`;
     const whatsappUrl = `https://wa.me/6287886425562?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleDemo = (demoUrl: string | null) => {
+    if (demoUrl) {
+      window.open(demoUrl, '_blank');
+    }
   };
 
   if (isLoading) {
@@ -81,11 +86,26 @@ const ProductList = () => {
         return (
           <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
             <CardHeader className="p-0">
-              <img
-                src={product.image_url || '/placeholder.svg'}
-                alt={product.name}
-                className="w-full h-48 object-cover rounded-t-lg"
-              />
+              <div className="relative">
+                <img
+                  src={product.image_url || '/placeholder.svg'}
+                  alt={product.name}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <Badge 
+                    variant="default"
+                    className={
+                      product.type === "Premium" 
+                      ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-500/90" 
+                      : "bg-gray-900/75 text-white border-transparent hover:bg-gray-900/85"
+                    }
+                  >
+                    {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
+                    {product.type}
+                  </Badge>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-6 flex flex-col flex-grow">
               <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
@@ -100,19 +120,31 @@ const ProductList = () => {
                 )}
               </div>
 
-              {product.category && (
+              {product.features && product.features.length > 0 && (
                 <div className="mb-4">
-                  <h4 className="font-semibold mb-2">Kategori:</h4>
+                  <h4 className="font-semibold mb-2">Fitur:</h4>
                   <div className="flex flex-wrap gap-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {product.category}
-                    </Badge>
+                    {product.features.map((feature, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               )}
 
               <div className="space-y-2 mt-auto">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDemo(product.demo_url)}
+                    disabled={!product.demo_url}
+                    className="flex items-center gap-1"
+                  >
+                    <Play className="h-3 w-3" />
+                    Demo
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
