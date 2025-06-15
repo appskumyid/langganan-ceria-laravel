@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -16,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type Product = Tables<'managed_products'>;
@@ -111,6 +110,22 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
       html_content: file.html_content ?? '',
     });
     setIsFormOpen(true);
+  };
+
+  const handlePreviewFile = (file: ProductFile) => {
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.open();
+      newWindow.document.write(file.html_content || '');
+      newWindow.document.close();
+      newWindow.document.title = file.file_name;
+    } else {
+      toast({
+        title: 'Gagal Membuka Preview',
+        description: 'Browser Anda mungkin memblokir pop-up. Mohon izinkan pop-up untuk situs ini.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDelete = (fileId: string) => {
@@ -215,6 +230,9 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
                 <TableCell>{new Date(file.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex space-x-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => handlePreviewFile(file)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(file)}>
                       <Edit className="h-4 w-4" />
                     </Button>
