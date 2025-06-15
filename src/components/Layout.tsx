@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -16,7 +16,7 @@ export default function Layout({ children }: LayoutProps) {
   const { isAdmin } = useUserRole()
   const location = useLocation()
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Reset view to main when navigating away
     setView('main');
   }, [location.pathname]);
