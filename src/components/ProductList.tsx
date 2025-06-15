@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Json } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { ProductDetailDialog } from "./ProductDetailDialog";
 
 type Product = Tables<'managed_products'>;
 type PricingInfo = { period: string; price: string };
@@ -28,9 +29,12 @@ const ProductList = () => {
     queryFn: fetchHomepageProducts,
   });
 
-  const handleDetail = (productId: string) => {
-    // Handle detail navigation
-    console.log(`View detail for product ${productId}`);
+  const [detailedProduct, setDetailedProduct] = useState<Product | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleDetail = (product: Product) => {
+    setDetailedProduct(product);
+    setIsDetailOpen(true);
   };
 
   const handleWhatsApp = (productName: string) => {
@@ -78,149 +82,156 @@ const ProductList = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {productsData.map((product) => {
-        let pricing: PricingInfo[] = [];
-        const productPricing = product.pricing;
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {productsData.map((product) => {
+          let pricing: PricingInfo[] = [];
+          const productPricing = product.pricing;
 
-        if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
-          // Handles when pricing is an object like { monthly: '100', yearly: '1000' }
-          pricing = Object.entries(productPricing)
-            .filter(([, price]) => price != null && String(price).trim() !== '')
-            .map(([period, price]) => ({
-              period: String(period),
-              price: String(price),
-            }));
-        } else if (Array.isArray(productPricing)) {
-          // Legacy support for array format if any
-          pricing = (productPricing as any[]).filter(p => p && p.price != null && String(p.price).trim() !== '');
-        } else if (typeof productPricing === 'string') {
-          try {
-            const parsed = JSON.parse(productPricing);
-            if (Array.isArray(parsed)) {
-              pricing = parsed.filter(p => p && p.price != null && String(p.price).trim() !== '');
-            } else if (parsed && typeof parsed === 'object') {
-              pricing = Object.entries(parsed)
-                .filter(([, price]) => price != null && String(price).trim() !== '')
-                .map(([period, price]) => ({
-                  period: String(period),
-                  price: String(price),
-                }));
+          if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
+            // Handles when pricing is an object like { monthly: '100', yearly: '1000' }
+            pricing = Object.entries(productPricing)
+              .filter(([, price]) => price != null && String(price).trim() !== '')
+              .map(([period, price]) => ({
+                period: String(period),
+                price: String(price),
+              }));
+          } else if (Array.isArray(productPricing)) {
+            // Legacy support for array format if any
+            pricing = (productPricing as any[]).filter(p => p && p.price != null && String(p.price).trim() !== '');
+          } else if (typeof productPricing === 'string') {
+            try {
+              const parsed = JSON.parse(productPricing);
+              if (Array.isArray(parsed)) {
+                pricing = parsed.filter(p => p && p.price != null && String(p.price).trim() !== '');
+              } else if (parsed && typeof parsed === 'object') {
+                pricing = Object.entries(parsed)
+                  .filter(([, price]) => price != null && String(price).trim() !== '')
+                  .map(([period, price]) => ({
+                    period: String(period),
+                    price: String(price),
+                  }));
+              }
+            } catch (e) {
+              console.error(`Failed to parse pricing for product ${product.id}:`, e);
             }
-          } catch (e) {
-            console.error(`Failed to parse pricing for product ${product.id}:`, e);
           }
-        }
 
-        const monthlyPriceInfo = pricing.find(p => p && typeof p.period === 'string' && p.period.toLowerCase() === 'monthly');
-        
-        // Prioritize monthly price, but fall back to the first available price.
-        const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
-        
-        const rawPrice = displayPriceInfo && displayPriceInfo.price ? String(displayPriceInfo.price) : '0';
-        const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
+          const monthlyPriceInfo = pricing.find(p => p && typeof p.period === 'string' && p.period.toLowerCase() === 'monthly');
+          
+          // Prioritize monthly price, but fall back to the first available price.
+          const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
+          
+          const rawPrice = displayPriceInfo && displayPriceInfo.price ? String(displayPriceInfo.price) : '0';
+          const displayPrice = Number(rawPrice.replace(/[^0-9]/g, ''));
 
-        const getPeriodText = (period?: string) => {
-          if (!period) return '';
-          switch (period.toLowerCase()) {
-            case 'monthly': return '/bulan';
-            case 'quarterly': return '/3 bulan';
-            case 'semiannual': return '/6 bulan';
-            case 'yearly': return '/tahun';
-            default: return `/${period}`;
-          }
-        };
-        
-        return (
-          <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
-            <CardHeader className="p-0">
-              <div className="relative">
-                <img
-                  src={product.image_url || '/placeholder.svg'}
-                  alt={product.name}
-                  className="w-full h-48 object-cover rounded-t-lg"
-                />
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <Badge 
-                    variant="default"
-                    className={
-                      product.type === "Premium" 
-                      ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-500/90" 
-                      : "bg-gray-900/75 text-white border-transparent hover:bg-gray-900/85"
-                    }
-                  >
-                    {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
-                    {product.type}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 flex flex-col flex-grow">
-              <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
-              <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
-              
-              <div className="mb-4">
-                <span className="text-2xl font-bold text-primary">
-                  {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}`: 'Hubungi kami'}
-                </span>
-                {displayPrice > 0 && displayPriceInfo && displayPriceInfo.period && (
-                  <span className="text-sm text-muted-foreground">
-                    {getPeriodText(displayPriceInfo.period)}
-                  </span>
-                )}
-              </div>
-
-              {product.features && product.features.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2">Fitur:</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {product.features.map((feature, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {feature}
-                      </Badge>
-                    ))}
+          const getPeriodText = (period?: string) => {
+            if (!period) return '';
+            switch (period.toLowerCase()) {
+              case 'monthly': return '/bulan';
+              case 'quarterly': return '/3 bulan';
+              case 'semiannual': return '/6 bulan';
+              case 'yearly': return '/tahun';
+              default: return `/${period}`;
+            }
+          };
+          
+          return (
+            <Card key={product.id} className="hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="p-0">
+                <div className="relative">
+                  <img
+                    src={product.image_url || '/placeholder.svg'}
+                    alt={product.name}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <Badge 
+                      variant="default"
+                      className={
+                        product.type === "Premium" 
+                        ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-500/90" 
+                        : "bg-gray-900/75 text-white border-transparent hover:bg-gray-900/85"
+                      }
+                    >
+                      {product.type === "Premium" && <Crown className="w-3 h-3 mr-1" />}
+                      {product.type}
+                    </Badge>
                   </div>
                 </div>
-              )}
-
-              <div className="space-y-2 mt-auto">
-                <div className="grid grid-cols-3 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDemo(product.demo_url)}
-                    disabled={!product.demo_url}
-                    className="flex items-center gap-1"
-                  >
-                    <Play className="h-3 w-3" />
-                    Demo
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDetail(product.id)}
-                    className="flex items-center gap-1"
-                  >
-                    <Eye className="h-3 w-3" />
-                    Detail
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleWhatsApp(product.name)}
-                    className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
-                  >
-                    <MessageCircle className="h-3 w-3" />
-                    WhatsApp
-                  </Button>
+              </CardHeader>
+              <CardContent className="p-6 flex flex-col flex-grow">
+                <CardTitle className="text-xl mb-2">{product.name}</CardTitle>
+                <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
+                
+                <div className="mb-4">
+                  <span className="text-2xl font-bold text-primary">
+                    {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}`: 'Hubungi kami'}
+                  </span>
+                  {displayPrice > 0 && displayPriceInfo && displayPriceInfo.period && (
+                    <span className="text-sm text-muted-foreground">
+                      {getPeriodText(displayPriceInfo.period)}
+                    </span>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+
+                {product.features && product.features.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Fitur:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {product.features.map((feature, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {feature}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 mt-auto">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDemo(product.demo_url)}
+                      disabled={!product.demo_url}
+                      className="flex items-center gap-1"
+                    >
+                      <Play className="h-3 w-3" />
+                      Demo
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDetail(product)}
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="h-3 w-3" />
+                      Detail
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleWhatsApp(product.name)}
+                      className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
+                    >
+                      <MessageCircle className="h-3 w-3" />
+                      WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      <ProductDetailDialog
+        product={detailedProduct}
+        isOpen={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
+    </>
   );
 };
 

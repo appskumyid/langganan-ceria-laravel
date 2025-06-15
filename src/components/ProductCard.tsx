@@ -11,7 +11,7 @@ interface ProductCardProps {
   product: Product;
   onSubscribe: (product: Product) => void;
   onDemo: (demoUrl: string | null) => void;
-  onDetail: (productId: string) => void;
+  onDetail: (product: Product) => void;
   onWhatsApp: (productName: string) => void;
 }
 
@@ -92,7 +92,7 @@ const ProductCard = ({ product, onSubscribe, onDemo, onDetail, onWhatsApp }: Pro
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => onDetail(product.id)}
+              onClick={() => onDetail(product)}
               className="flex items-center gap-1"
             >
               <Eye className="h-3 w-3" />

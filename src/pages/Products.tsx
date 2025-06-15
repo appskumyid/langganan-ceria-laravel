@@ -16,6 +16,7 @@ import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
 import { ProductSearch, CategoryTabs } from "@/components/ProductFilters";
 import { ProductPagination } from "@/components/ProductPagination";
+import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 
 type Product = Tables<'managed_products'>;
 
@@ -67,6 +68,8 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [detailedProduct, setDetailedProduct] = useState<Product | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -117,8 +120,9 @@ const Products = () => {
     }
   };
 
-  const handleDetail = (productId: string) => {
-    console.log(`View detail for product ${productId}`);
+  const handleDetail = (product: Product) => {
+    setDetailedProduct(product);
+    setIsDetailOpen(true);
   };
 
   const handleWhatsApp = (productName: string) => {
@@ -226,6 +230,12 @@ const Products = () => {
           }}
         />
       )}
+
+      <ProductDetailDialog
+        product={detailedProduct}
+        isOpen={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
     </div>
   );
 };
