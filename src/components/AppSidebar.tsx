@@ -1,5 +1,5 @@
 
-import { Home, Users, Package, LogOut, ListChecks, Settings } from "lucide-react"
+import { Home, Users, Package, LogOut, ListChecks, Settings, Briefcase } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserRole } from "@/hooks/useUserRole"
@@ -34,6 +34,7 @@ export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void })
     { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
     { title: "Admin Dashboard", url: "/admin", icon: Users },
     { title: "Kelola Produk", url: "/admin/products", icon: Package },
+    { title: "Kelola Layanan", url: "/admin/services", icon: Briefcase },
   ]
 
   const items = isAdmin ? adminItems : memberItems
