@@ -6,6 +6,8 @@ import type { Tables } from '@/integrations/supabase/types';
 import SubscriptionManagementForms from '@/components/SubscriptionManagementForms';
 import { Loader2, Terminal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ProductFileManager } from '@/components/ProductFileManager';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const fetchSubscriptionById = async (subscriptionId: string) => {
   const { data, error } = await supabase
@@ -20,14 +22,36 @@ const fetchSubscriptionById = async (subscriptionId: string) => {
   return data;
 };
 
+const fetchProductByName = async (productName: string) => {
+  const { data, error } = await supabase
+    .from('managed_products')
+    .select('*')
+    .eq('name', productName)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching product by name:", error);
+    return null;
+  }
+  return data;
+};
+
 const AdminSubscriptionDetail = () => {
   const { subscriptionId } = useParams<{ subscriptionId: string }>();
 
-  const { data: subscription, isLoading, error } = useQuery({
+  const { data: subscription, isLoading: isLoadingSubscription, error } = useQuery({
     queryKey: ['adminSubscriptionDetail', subscriptionId],
     queryFn: () => fetchSubscriptionById(subscriptionId!),
     enabled: !!subscriptionId,
   });
+
+  const { data: product, isLoading: isLoadingProduct } = useQuery<Tables<'managed_products'> | null>({
+    queryKey: ['managedProductByName', subscription?.product_name],
+    queryFn: () => fetchProductByName(subscription!.product_name),
+    enabled: !!subscription?.product_name,
+  });
+
+  const isLoading = isLoadingSubscription || isLoadingProduct;
 
   if (isLoading) {
     return (
@@ -64,6 +88,17 @@ const AdminSubscriptionDetail = () => {
         <SubscriptionManagementForms subscription={subscription} />
       ) : (
         <p className="text-center py-10 text-muted-foreground">Langganan tidak ditemukan.</p>
+      )}
+
+      {product && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Kelola File Produk</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProductFileManager product={product} />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
