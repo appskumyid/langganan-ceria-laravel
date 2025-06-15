@@ -31,7 +31,7 @@ const Navbar = () => {
   return (
     <nav className="flex justify-between items-center w-full px-4">
       <div className="text-xl font-semibold text-gray-900">
-        Sistem Absensi
+        Dashboard
       </div>
       
       <div className="flex items-center space-x-4">

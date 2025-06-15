@@ -15,7 +15,7 @@ const Index = () => {
           Selamat Datang, {user?.email}!
         </h1>
         <p className="text-gray-600">
-          Dashboard utama sistem absensi. Role Anda: {role || 'Loading...'}
+          Dashboard utama Anda. Role Anda: {role || 'Loading...'}
         </p>
       </div>
 
