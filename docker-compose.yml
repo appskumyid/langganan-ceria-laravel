@@ -1,5 +1,13 @@
 
 version: '3.8'
+
+volumes:
+  db_data:
+  storage_data:
+
+networks:
+  supabase_network:
+
 services:
   app:
     build:
@@ -10,3 +18,152 @@ services:
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     ports:
       - "5173:80"
+    depends_on:
+      - kong
+    networks:
+      - supabase_network
+
+  db:
+    image: supabase/postgres:15.1.0.110
+    container_name: supabase_db
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+      - ./supabase/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    environment:
+      POSTGRES_USER: supabase
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    networks:
+      - supabase_network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kong:
+    image: kong:2.8.1
+    container_name: supabase_kong
+    ports:
+      - "${KONG_HTTP_PORT}:8000"
+      - "${KONG_HTTPS_PORT}:8443"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: "/var/lib/kong/kong.yml"
+      KONG_DNS_ORDER: "LAST,A,CNAME"
+      KONG_PLUGINS: "request-transformer,cors,key-auth"
+    volumes:
+      - ./supabase/kong/kong.yml:/var/lib/kong/kong.yml
+    networks:
+      - supabase_network
+    restart: always
+    depends_on:
+      - auth
+      - rest
+      - realtime
+      - storage-api
+      - functions
+
+  auth:
+    image: supabase/gotrue:v2.128.1
+    container_name: supabase_auth
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: "postgres://supabase:${POSTGRES_PASSWORD}@db:5432/postgres"
+      GOTRUE_SITE_URL: ${VITE_SUPABASE_URL}
+      GOTRUE_URI_ALLOW_LIST: "*,*"
+    networks:
+      - supabase_network
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+
+  rest:
+    image: postgrest/postgrest:v11.2.2
+    container_name: supabase_rest
+    environment:
+      PGRST_DB_URI: "postgres://supabase:${POSTGRES_PASSWORD}@db:5432/postgres"
+      PGRST_DB_SCHEMA: "public,storage"
+      PGRST_DB_ANON_ROLE: "anon"
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - supabase_network
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+
+  realtime:
+    image: supabase/realtime:v2.26.1
+    container_name: supabase_realtime
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: postgres
+      DB_SCHEMA: "public,storage"
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - supabase_network
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+  
+  storage-api:
+    image: supabase/storage-api:v0.47.3
+    container_name: supabase_storage
+    environment:
+      DATABASE_URL: "postgres://supabase:${POSTGRES_PASSWORD}@db:5432/postgres"
+      FILE_SIZE_LIMIT: "50Mi"
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      S3_ACCESS_KEY: "supabase"
+      S3_SECRET_KEY: "supabase"
+      S3_URL: "http://minio:9000"
+      REGION: "local-dev"
+    networks:
+      - supabase_network
+    restart: always
+    depends_on:
+      - minio
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    container_name: supabase_minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "supabase"
+      MINIO_ROOT_PASSWORD: "supabase_password"
+    volumes:
+      - storage_data:/data
+    networks:
+      - supabase_network
+    restart: always
+
+  functions:
+    image: supabase/edge-runtime:v1.36.1
+    container_name: supabase_functions
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: "http://kong:8000"
+      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+    volumes:
+      - ./supabase/functions:/home/deno/functions
+    networks:
+      - supabase_network
+    restart: always
+
