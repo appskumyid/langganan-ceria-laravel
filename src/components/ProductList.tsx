@@ -2,20 +2,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MessageCircle, Play } from "lucide-react";
+import { Eye, MessageCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type Product = Tables<'products'>;
+type Product = Tables<'store_products'>;
 
 const fetchHomepageProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
-    .from('products')
+    .from('store_products')
     .select('*')
     .limit(3)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error("Error fetching homepage products:", error);
@@ -26,22 +26,11 @@ const fetchHomepageProducts = async (): Promise<Product[]> => {
 
 const ProductList = () => {
   const { data: productsData, isLoading, isError } = useQuery({
-    queryKey: ['homepageProducts'],
+    queryKey: ['homepageStoreProducts'],
     queryFn: fetchHomepageProducts,
   });
 
-  const handleSubscribe = (productName: string) => {
-    // Handle subscription logic
-    console.log(`Subscribe to ${productName}`);
-  };
-
-  const handleDemo = (demoUrl: string | null) => {
-    if (demoUrl) {
-      window.open(demoUrl, '_blank');
-    }
-  };
-
-  const handleDetail = (productId: number) => {
+  const handleDetail = (productId: string) => {
     // Handle detail navigation
     console.log(`View detail for product ${productId}`);
   };
@@ -64,9 +53,7 @@ const ProductList = () => {
               <Skeleton className="h-4 w-5/6" />
               <Skeleton className="h-8 w-1/2" />
               <div className="space-y-2 pt-2">
-                <Skeleton className="h-10 w-full" />
-                <div className="grid grid-cols-3 gap-2">
-                  <Skeleton className="h-9 w-full" />
+                <div className="grid grid-cols-2 gap-2">
                   <Skeleton className="h-9 w-full" />
                   <Skeleton className="h-9 w-full" />
                 </div>
@@ -102,41 +89,22 @@ const ProductList = () => {
             <p className="text-gray-600 mb-4 h-12 overflow-hidden">{product.description || 'Tidak ada deskripsi.'}</p>
             
             <div className="mb-4">
-              <span className="text-2xl font-bold text-primary">{product.price}</span>
-              <span className="text-gray-500">{product.period}</span>
+              <span className="text-2xl font-bold text-primary">Rp{product.price.toLocaleString('id-ID')}</span>
             </div>
 
-            <div className="mb-4">
-              <h4 className="font-semibold mb-2">Fitur:</h4>
-              <div className="flex flex-wrap gap-1">
-                {product.features?.map((feature, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {feature}
+            {product.category && (
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Kategori:</h4>
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {product.category}
                   </Badge>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2 mt-auto">
-              <Button 
-                className="w-full" 
-                onClick={() => handleSubscribe(product.name)}
-              >
-                Add Subscribe
-              </Button>
-              
-              <div className="grid grid-cols-3 gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDemo(product.demo_url)}
-                  disabled={!product.demo_url}
-                  className="flex items-center gap-1"
-                >
-                  <Play className="h-3 w-3" />
-                  Demo
-                </Button>
-                
+              <div className="grid grid-cols-2 gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -154,7 +122,7 @@ const ProductList = () => {
                   className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
                 >
                   <MessageCircle className="h-3 w-3" />
-                  WA
+                  WhatsApp
                 </Button>
               </div>
             </div>
