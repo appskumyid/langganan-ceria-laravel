@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +11,7 @@ type Product = Tables<'store_products'>;
 
 const fetchHomepageProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
-    .from('store_products')
-    .select('*')
-    .limit(3)
-    .order('created_at', { ascending: false });
+    .rpc('get_random_store_products', { limit_count: 3 });
 
   if (error) {
     console.error("Error fetching homepage products:", error);

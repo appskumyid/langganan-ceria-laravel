@@ -650,6 +650,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_random_store_products: {
+        Args: { limit_count: number }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          store_details_id: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _user_id: string
