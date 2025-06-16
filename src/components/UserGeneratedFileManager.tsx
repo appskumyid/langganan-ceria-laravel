@@ -65,17 +65,30 @@ const generateFilesForSubscription = async (subscriptionId: string) => {
   for (const file of productFiles) {
     let content = file.html_content || '';
     
+    // Replace placeholders with actual data from subscription and store details
     if (storeData) {
-      // Replace placeholders with actual data
       content = content
         .replace(/\[nama\]/g, storeData.store_name || 'Nama Toko')
         .replace(/\[nomor hp\]/g, storeData.phone_number || 'Nomor HP')
+        .replace(/\[email\]/g, subscription.customer_email || 'Email')
         .replace(/\[about\]/g, storeData.about_store || 'Tentang Toko')
         .replace(/\[alamat\]/g, storeData.store_address || 'Alamat Toko')
         .replace(/\[link instagram\]/g, storeData.instagram_url || '#')
         .replace(/\[facebook\]/g, storeData.facebook_url || '#')
         .replace(/\[youtube\]/g, storeData.youtube_url || '#')
         .replace(/\[linkedin\]/g, storeData.linkedin_url || '#');
+    } else {
+      // If no store data, still replace with subscription data
+      content = content
+        .replace(/\[nama\]/g, 'Nama Toko')
+        .replace(/\[nomor hp\]/g, subscription.customer_phone || 'Nomor HP')
+        .replace(/\[email\]/g, subscription.customer_email || 'Email')
+        .replace(/\[about\]/g, 'Tentang Toko')
+        .replace(/\[alamat\]/g, 'Alamat Toko')
+        .replace(/\[link instagram\]/g, '#')
+        .replace(/\[facebook\]/g, '#')
+        .replace(/\[youtube\]/g, '#')
+        .replace(/\[linkedin\]/g, '#');
     }
     
     // Save to user_generated_files table

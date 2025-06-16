@@ -95,6 +95,7 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
     // Replace all placeholders
     processedContent = processedContent.replace(/\[nama\]/g, storeData.store_name || '');
     processedContent = processedContent.replace(/\[nomor hp\]/g, storeData.phone_number || '');
+    processedContent = processedContent.replace(/\[email\]/g, subscription.customer_email || '');
     processedContent = processedContent.replace(/\[about\]/g, storeData.about_store || '');
     processedContent = processedContent.replace(/\[alamat\]/g, storeData.store_address || '');
     processedContent = processedContent.replace(/\[link instagram\]/g, storeData.instagram_url || '');
