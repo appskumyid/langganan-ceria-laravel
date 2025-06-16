@@ -562,6 +562,41 @@ export type Database = {
           },
         ]
       }
+      user_generated_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          html_content: string | null
+          id: string
+          updated_at: string
+          user_subscription_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          html_content?: string | null
+          id?: string
+          updated_at?: string
+          user_subscription_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          html_content?: string | null
+          id?: string
+          updated_at?: string
+          user_subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_generated_files_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

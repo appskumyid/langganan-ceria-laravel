@@ -7,6 +7,7 @@ import SubscriptionManagementForms from '@/components/SubscriptionManagementForm
 import { Loader2, Terminal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProductFileManager } from '@/components/ProductFileManager';
+import { UserGeneratedFileManager } from '@/components/UserGeneratedFileManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const fetchSubscriptionById = async (subscriptionId: string) => {
@@ -90,10 +91,14 @@ const AdminSubscriptionDetail = () => {
         <p className="text-center py-10 text-muted-foreground">Langganan tidak ditemukan.</p>
       )}
 
+      {subscription && (
+        <UserGeneratedFileManager subscription={subscription} />
+      )}
+
       {product && (
         <Card>
           <CardHeader>
-            <CardTitle>Kelola File Produk</CardTitle>
+            <CardTitle>Template File Produk (Asli)</CardTitle>
           </CardHeader>
           <CardContent>
             <ProductFileManager product={product} />

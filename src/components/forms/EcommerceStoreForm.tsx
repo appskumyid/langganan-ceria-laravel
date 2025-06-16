@@ -14,7 +14,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Youtube, Facebook, Linkedin, Instagram } from "lucide-react";
 import ProductManager from "./product/ProductManager";
 
-
 const formSchema = z.object({
   store_name: z.string().min(1, "Nama toko wajib diisi."),
   about_store: z.string().optional(),
@@ -42,6 +41,87 @@ const fetchStoreDetails = async (subscriptionId: string) => {
     .maybeSingle();
   if (error) throw error;
   return data;
+};
+
+const fetchProductFiles = async (productName: string) => {
+  const { data: product, error: productError } = await supabase
+    .from('managed_products')
+    .select('id')
+    .eq('name', productName)
+    .maybeSingle();
+
+  if (productError || !product) {
+    console.error("Error fetching product:", productError);
+    return [];
+  }
+
+  const { data: files, error: filesError } = await supabase
+    .from('product_files')
+    .select('*')
+    .eq('product_id', product.id);
+
+  if (filesError) {
+    console.error("Error fetching product files:", filesError);
+    return [];
+  }
+
+  return files;
+};
+
+const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, storeData: FormValues) => {
+  console.log("Starting file generation for subscription:", subscription.id);
+  
+  // Get template files from product
+  const templateFiles = await fetchProductFiles(subscription.product_name);
+  console.log("Template files found:", templateFiles.length);
+
+  if (templateFiles.length === 0) {
+    console.log("No template files found for product:", subscription.product_name);
+    return;
+  }
+
+  // Process each template file
+  for (const templateFile of templateFiles) {
+    if (!templateFile.html_content) {
+      console.log("Skipping file with no content:", templateFile.file_name);
+      continue;
+    }
+
+    console.log("Processing file:", templateFile.file_name);
+
+    // Replace placeholders with actual data
+    let processedContent = templateFile.html_content;
+    
+    // Replace all placeholders
+    processedContent = processedContent.replace(/\[nama\]/g, storeData.store_name || '');
+    processedContent = processedContent.replace(/\[nomor hp\]/g, storeData.phone_number || '');
+    processedContent = processedContent.replace(/\[about\]/g, storeData.about_store || '');
+    processedContent = processedContent.replace(/\[alamat\]/g, storeData.store_address || '');
+    processedContent = processedContent.replace(/\[link instagram\]/g, storeData.instagram_url || '');
+    processedContent = processedContent.replace(/\[facebook\]/g, storeData.facebook_url || '');
+    processedContent = processedContent.replace(/\[youtube\]/g, storeData.youtube_url || '');
+    processedContent = processedContent.replace(/\[linkedin\]/g, storeData.linkedin_url || '');
+
+    // Upsert to user_generated_files
+    const { error: upsertError } = await supabase
+      .from('user_generated_files')
+      .upsert({
+        user_subscription_id: subscription.id,
+        file_name: templateFile.file_name,
+        html_content: processedContent,
+      }, {
+        onConflict: 'user_subscription_id,file_name'
+      });
+
+    if (upsertError) {
+      console.error("Error upserting file:", templateFile.file_name, upsertError);
+      throw upsertError;
+    } else {
+      console.log("Successfully processed file:", templateFile.file_name);
+    }
+  }
+
+  console.log("File generation completed for subscription:", subscription.id);
 };
 
 const EcommerceStoreForm = ({ subscription }: EcommerceStoreFormProps) => {
@@ -72,6 +152,8 @@ const EcommerceStoreForm = ({ subscription }: EcommerceStoreFormProps) => {
   const upsertMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (!user) throw new Error("User not authenticated");
+      
+      // First, save store details
       const { data, error } = await supabase
         .from('store_details')
         .upsert({
@@ -84,16 +166,21 @@ const EcommerceStoreForm = ({ subscription }: EcommerceStoreFormProps) => {
         .single();
       
       if (error) throw error;
+
+      // Then generate user files
+      await generateUserFiles(subscription, values);
+      
       return data;
     },
     onSuccess: () => {
       toast({
         title: "Sukses!",
-        description: "Detail toko berhasil disimpan.",
+        description: "Detail toko berhasil disimpan dan file website telah diperbarui.",
       });
       queryClient.invalidateQueries({ queryKey: ['storeDetails', subscription.id] });
     },
     onError: (error) => {
+      console.error("Error in upsertMutation:", error);
       toast({
         variant: "destructive",
         title: "Error!",
@@ -189,4 +276,3 @@ const EcommerceStoreForm = ({ subscription }: EcommerceStoreFormProps) => {
 };
 
 export default EcommerceStoreForm;
-
