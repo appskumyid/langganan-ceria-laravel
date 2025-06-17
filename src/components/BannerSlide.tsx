@@ -1,4 +1,6 @@
 
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/integrations/supabase/client"
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Carousel,
@@ -8,7 +10,21 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-const bannerData = [
+const fetchBannerSettings = async () => {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .in("key", ["banner_image_1", "banner_image_2", "banner_image_3"])
+  
+  if (error) throw new Error(error.message)
+  
+  return data.reduce((acc, { key, value }) => {
+    acc[key] = value
+    return acc
+  }, {} as Record<string, string>)
+}
+
+const defaultBannerData = [
   {
     id: 1,
     title: "Selamat Datang di Sistem Langganan",
@@ -33,6 +49,16 @@ const bannerData = [
 ];
 
 const BannerSlide = () => {
+  const { data: bannerSettings } = useQuery({
+    queryKey: ["banner_settings"],
+    queryFn: fetchBannerSettings,
+  })
+
+  const bannerData = defaultBannerData.map((banner, index) => ({
+    ...banner,
+    image: bannerSettings?.[`banner_image_${index + 1}`] || banner.image
+  }))
+
   return (
     <div className="relative">
       <Carousel className="w-full">

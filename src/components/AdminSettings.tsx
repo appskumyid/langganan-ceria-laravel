@@ -1,4 +1,3 @@
-
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -24,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 
 // Schemas for form validation
@@ -37,9 +37,25 @@ const gatewayFormSchema = z.object({
   gateway_public_key: z.string().min(1, "Public Key wajib diisi."),
 })
 
+const footerFormSchema = z.object({
+  footer_address: z.string().min(1, "Alamat wajib diisi."),
+  footer_phone: z.string().min(1, "Nomor telepon wajib diisi."),
+  footer_instagram_url: z.string().url("URL Instagram tidak valid.").optional().or(z.literal("")),
+  footer_youtube_url: z.string().url("URL YouTube tidak valid.").optional().or(z.literal("")),
+  footer_tiktok_url: z.string().url("URL TikTok tidak valid.").optional().or(z.literal("")),
+})
+
+const bannerFormSchema = z.object({
+  banner_image_1: z.string().url("URL gambar 1 tidak valid.").min(1, "URL gambar 1 wajib diisi."),
+  banner_image_2: z.string().url("URL gambar 2 tidak valid.").min(1, "URL gambar 2 wajib diisi."),
+  banner_image_3: z.string().url("URL gambar 3 tidak valid.").min(1, "URL gambar 3 wajib diisi."),
+})
+
 // Types
 type MailchimpFormValues = z.infer<typeof mailchimpFormSchema>
 type GatewayFormValues = z.infer<typeof gatewayFormSchema>
+type FooterFormValues = z.infer<typeof footerFormSchema>
+type BannerFormValues = z.infer<typeof bannerFormSchema>
 
 // Function to fetch settings
 const fetchSettings = async () => {
@@ -111,6 +127,26 @@ export default function AdminSettings() {
     },
   })
 
+  const footerForm = useForm<FooterFormValues>({
+    resolver: zodResolver(footerFormSchema),
+    defaultValues: {
+      footer_address: "",
+      footer_phone: "",
+      footer_instagram_url: "",
+      footer_youtube_url: "",
+      footer_tiktok_url: "",
+    },
+  })
+
+  const bannerForm = useForm<BannerFormValues>({
+    resolver: zodResolver(bannerFormSchema),
+    defaultValues: {
+      banner_image_1: "",
+      banner_image_2: "",
+      banner_image_3: "",
+    },
+  })
+
   useEffect(() => {
     if (settings) {
       console.log("Settings loaded, resetting forms:", settings)
@@ -122,8 +158,20 @@ export default function AdminSettings() {
         gateway_secret_key: settings.gateway_secret_key || "",
         gateway_public_key: settings.gateway_public_key || "",
       })
+      footerForm.reset({
+        footer_address: settings.footer_address || "",
+        footer_phone: settings.footer_phone || "",
+        footer_instagram_url: settings.footer_instagram_url || "",
+        footer_youtube_url: settings.footer_youtube_url || "",
+        footer_tiktok_url: settings.footer_tiktok_url || "",
+      })
+      bannerForm.reset({
+        banner_image_1: settings.banner_image_1 || "",
+        banner_image_2: settings.banner_image_2 || "",
+        banner_image_3: settings.banner_image_3 || "",
+      })
     }
-  }, [settings, mailchimpForm, gatewayForm])
+  }, [settings, mailchimpForm, gatewayForm, footerForm, bannerForm])
 
   const onMailchimpSubmit = (values: MailchimpFormValues) => {
     const settingsToSave = Object.entries(values).map(([key, value]) => ({
@@ -140,6 +188,24 @@ export default function AdminSettings() {
       value,
     }))
     console.log("Attempting to save Gateway settings:", settingsToSave)
+    mutate(settingsToSave)
+  }
+
+  const onFooterSubmit = (values: FooterFormValues) => {
+    const settingsToSave = Object.entries(values).map(([key, value]) => ({
+      key,
+      value: value || "",
+    }))
+    console.log("Attempting to save Footer settings:", settingsToSave)
+    mutate(settingsToSave)
+  }
+
+  const onBannerSubmit = (values: BannerFormValues) => {
+    const settingsToSave = Object.entries(values).map(([key, value]) => ({
+      key,
+      value,
+    }))
+    console.log("Attempting to save Banner settings:", settingsToSave)
     mutate(settingsToSave)
   }
   
@@ -159,6 +225,148 @@ export default function AdminSettings() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Pengaturan</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Footer</CardTitle>
+          <CardDescription>
+            Atur informasi footer yang akan ditampilkan di halaman website.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...footerForm}>
+            <form onSubmit={footerForm.handleSubmit(onFooterSubmit)} className="space-y-4">
+              <FormField
+                control={footerForm.control}
+                name="footer_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alamat</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Masukkan alamat perusahaan" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={footerForm.control}
+                name="footer_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nomor Telepon</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Masukkan nomor telepon" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={footerForm.control}
+                name="footer_instagram_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Instagram</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://instagram.com/username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={footerForm.control}
+                name="footer_youtube_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL YouTube</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://youtube.com/@username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={footerForm.control}
+                name="footer_tiktok_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL TikTok</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://tiktok.com/@username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan Footer
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Banner</CardTitle>
+          <CardDescription>
+            Atur gambar banner yang akan ditampilkan di halaman home.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...bannerForm}>
+            <form onSubmit={bannerForm.handleSubmit(onBannerSubmit)} className="space-y-4">
+              <FormField
+                control={bannerForm.control}
+                name="banner_image_1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Gambar Banner 1</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com/image1.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={bannerForm.control}
+                name="banner_image_2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Gambar Banner 2</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com/image2.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={bannerForm.control}
+                name="banner_image_3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Gambar Banner 3</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com/image3.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan Banner
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
