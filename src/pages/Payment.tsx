@@ -7,7 +7,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Copy, Clock, ArrowLeft, Loader2, Banknote, CreditCard } from "lucide-react";
+import { CheckCircle, Copy, Clock, ArrowLeft, Loader2, Banknote, CreditCard, Heart } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,28 @@ const fetchSubscriptionDetails = async (subscriptionId: string, userId: string |
     throw new Error(error.message);
   }
   return data;
+};
+
+// Helper function to extract donation amount from total price
+const extractDonationInfo = (priceString: string) => {
+  const totalAmount = parseInt(priceString.replace(/[^\d]/g, '')) || 0;
+  // Assume the last 3 digits are the donation amount
+  const donationAmount = totalAmount % 1000;
+  const baseAmount = totalAmount - donationAmount;
+  
+  return {
+    totalAmount,
+    baseAmount,
+    donationAmount: donationAmount > 0 ? donationAmount : 0
+  };
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
 };
 
 const Payment = () => {
@@ -119,12 +141,10 @@ const Payment = () => {
 
       if (error) throw error;
 
-      // Invoke mailchimp sync, but don't block the user flow
       supabase.functions.invoke('mailchimp-sync', {
         body: { subscription_id: subscription.id }
       }).then(({ error: funcError }) => {
         if (funcError) {
-          // Log silently, as the main action was successful.
           console.warn("Mailchimp sync failed on user confirmation:", funcError.message);
         }
       });
@@ -186,6 +206,9 @@ const Payment = () => {
     { id: 'bank_transfer', name: 'Transfer Bank', icon: Banknote },
     { id: 'virtual_account', name: 'Virtual Account', icon: CreditCard, disabled: true },
   ];
+
+  // Extract donation information
+  const { totalAmount, baseAmount, donationAmount } = extractDonationInfo(subscription.product_price);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -294,6 +317,26 @@ const Payment = () => {
                   </div>
                   <Badge variant={subscription.product_type === 'Premium' ? 'default' : 'secondary'}>{subscription.product_type}</Badge>
                 </div>
+                
+                {donationAmount > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>Harga produk:</span>
+                      <span>{formatCurrency(baseAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4 text-green-600" />
+                        <span className="text-green-600">Donasi amal:</span>
+                      </div>
+                      <span className="text-green-600">{formatCurrency(donationAmount)}</span>
+                    </div>
+                    <p className="text-xs text-green-600 italic">
+                      *Donasi akan disalurkan untuk fakir miskin dan lembaga amal resmi
+                    </p>
+                  </>
+                )}
+                
                 <hr />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
@@ -301,6 +344,7 @@ const Payment = () => {
                 </div>
               </CardContent>
             </Card>
+            
             <Card>
               <CardHeader><CardTitle>Detail Pelanggan</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">

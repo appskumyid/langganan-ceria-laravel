@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { CreditCard, Building2, Wallet, Smartphone, Loader2 } from "lucide-react";
+import { CreditCard, Building2, Wallet, Smartphone, Loader2, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +53,20 @@ const paymentMethods = [
   }
 ];
 
+// Function to generate random donation amount and payment code
+const generateDonationAmount = () => {
+  // Generate random amount between 100-999
+  return Math.floor(Math.random() * 900) + 100;
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
+
 const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -59,6 +74,11 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
 
   const [selectedPayment, setSelectedPayment] = useState("transfer");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [donationAmount] = useState(generateDonationAmount());
+
+  // Calculate total payment amount
+  const basePrice = parseInt(product.price.replace(/[^\d]/g, '')) || 0;
+  const totalAmount = basePrice + donationAmount;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -85,7 +105,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
       user_id: user.id,
       product_static_id: product.id,
       product_name: product.name,
-      product_price: product.price,
+      product_price: formatCurrency(totalAmount), // Use total amount including donation
       product_period: product.period,
       product_category: product.category,
       product_type: product.type,
@@ -115,7 +135,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
     } else {
       toast({
         title: "Berhasil!",
-        description: "Produk telah ditambahkan. Lanjutkan ke pembayaran.",
+        description: `Produk telah ditambahkan. Total pembayaran ${formatCurrency(totalAmount)} (termasuk donasi ${formatCurrency(donationAmount)} untuk fakir miskin).`,
       });
       onClose();
       if (data) {
@@ -144,6 +164,25 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-lg">{product.price}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Donation Info */}
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Heart className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold text-green-800">Donasi Otomatis</h3>
+              </div>
+              <p className="text-sm text-green-700 mb-2">
+                Tambahan {formatCurrency(donationAmount)} akan disumbangkan untuk fakir miskin dan lembaga amal resmi.
+              </p>
+              <div className="border-t border-green-200 pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-700">Total Pembayaran:</span>
+                  <span className="font-bold text-lg text-green-800">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </CardContent>
