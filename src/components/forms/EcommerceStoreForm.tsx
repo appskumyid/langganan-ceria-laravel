@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +79,27 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
     return;
   }
 
+  // Get store details for products
+  const { data: storeDetails, error: storeError } = await supabase
+    .from('store_details')
+    .select('*')
+    .eq('user_subscription_id', subscription.id)
+    .maybeSingle();
+
+  // Get store products
+  let storeProducts: any[] = [];
+  if (storeDetails) {
+    const { data: products, error: productsError } = await supabase
+      .from('store_products')
+      .select('*')
+      .eq('store_details_id', storeDetails.id)
+      .order('created_at', { ascending: true });
+    
+    if (!productsError && products) {
+      storeProducts = products;
+    }
+  }
+
   // Process each template file
   for (const templateFile of templateFiles) {
     if (!templateFile.html_content) {
@@ -98,10 +118,10 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
     processedContent = processedContent.replace(/\[email\]/g, subscription.customer_email || '');
     processedContent = processedContent.replace(/\[about\]/g, storeData.about_store || '');
     processedContent = processedContent.replace(/\[alamat\]/g, storeData.store_address || '');
-    processedContent = processedContent.replace(/\[link instagram\]/g, storeData.instagram_url || '');
-    processedContent = processedContent.replace(/\[facebook\]/g, storeData.facebook_url || '');
-    processedContent = processedContent.replace(/\[youtube\]/g, storeData.youtube_url || '');
-    processedContent = processedContent.replace(/\[linkedin\]/g, storeData.linkedin_url || '');
+    processedContent = processedContent.replace(/\[instagram_url\]/g, storeData.instagram_url || '');
+    processedContent = processedContent.replace(/\[facebook_url\]/g, storeData.facebook_url || '');
+    processedContent = processedContent.replace(/\[youtube_url\]/g, storeData.youtube_url || '');
+    processedContent = processedContent.replace(/\[linkedin_url\]/g, storeData.linkedin_url || '');
 
     // Upsert to user_generated_files
     const { error: upsertError } = await supabase
@@ -119,6 +139,38 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
       throw upsertError;
     } else {
       console.log("Successfully processed file:", templateFile.file_name);
+    }
+  }
+
+  // Generate data.json file for products
+  if (storeProducts.length > 0) {
+    const productsData = storeProducts.map((product, index) => ({
+      id: index + 1,
+      name: product.name,
+      category: product.category || 'Produk',
+      price: Number(product.price),
+      description: product.description || '',
+      image: product.image_url ? product.image_url.split('/').pop() : `product_${index + 1}.jpg`
+    }));
+    
+    const dataJsonContent = JSON.stringify(productsData, null, 2);
+    
+    // Save data.json to user_generated_files
+    const { error: dataJsonError } = await supabase
+      .from('user_generated_files')
+      .upsert({
+        user_subscription_id: subscription.id,
+        file_name: 'data.json',
+        html_content: dataJsonContent,
+      }, {
+        onConflict: 'user_subscription_id,file_name'
+      });
+    
+    if (dataJsonError) {
+      console.error("Error upserting data.json:", dataJsonError);
+      throw dataJsonError;
+    } else {
+      console.log("Successfully created data.json file");
     }
   }
 

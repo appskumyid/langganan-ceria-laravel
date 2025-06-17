@@ -43,6 +43,15 @@ const generateFilesForSubscription = async (subscriptionId: string) => {
   
   if (storeError) throw storeError;
   
+  // Get store products for this subscription
+  const { data: storeProducts, error: productsError } = await supabase
+    .from('store_products')
+    .select('*')
+    .eq('store_details_id', storeData?.id || '')
+    .order('created_at', { ascending: true });
+  
+  if (productsError) console.log('No products found or error:', productsError);
+  
   // Get product files (templates)
   const { data: product, error: productError } = await supabase
     .from('managed_products')
@@ -73,10 +82,10 @@ const generateFilesForSubscription = async (subscriptionId: string) => {
         .replace(/\[email\]/g, subscription.customer_email || 'Email')
         .replace(/\[about\]/g, storeData.about_store || 'Tentang Toko')
         .replace(/\[alamat\]/g, storeData.store_address || 'Alamat Toko')
-        .replace(/\[link instagram\]/g, storeData.instagram_url || '#')
-        .replace(/\[facebook\]/g, storeData.facebook_url || '#')
-        .replace(/\[youtube\]/g, storeData.youtube_url || '#')
-        .replace(/\[linkedin\]/g, storeData.linkedin_url || '#');
+        .replace(/\[instagram_url\]/g, storeData.instagram_url || '#')
+        .replace(/\[facebook_url\]/g, storeData.facebook_url || '#')
+        .replace(/\[youtube_url\]/g, storeData.youtube_url || '#')
+        .replace(/\[linkedin_url\]/g, storeData.linkedin_url || '#');
     } else {
       // If no store data, still replace with subscription data
       content = content
@@ -85,10 +94,10 @@ const generateFilesForSubscription = async (subscriptionId: string) => {
         .replace(/\[email\]/g, subscription.customer_email || 'Email')
         .replace(/\[about\]/g, 'Tentang Toko')
         .replace(/\[alamat\]/g, 'Alamat Toko')
-        .replace(/\[link instagram\]/g, '#')
-        .replace(/\[facebook\]/g, '#')
-        .replace(/\[youtube\]/g, '#')
-        .replace(/\[linkedin\]/g, '#');
+        .replace(/\[instagram_url\]/g, '#')
+        .replace(/\[facebook_url\]/g, '#')
+        .replace(/\[youtube_url\]/g, '#')
+        .replace(/\[linkedin_url\]/g, '#');
     }
     
     // Save to user_generated_files table
@@ -107,6 +116,38 @@ const generateFilesForSubscription = async (subscriptionId: string) => {
     generatedFiles.push({
       name: file.file_name,
       content: content
+    });
+  }
+  
+  // Generate data.json file for products
+  if (storeProducts && storeProducts.length > 0) {
+    const productsData = storeProducts.map((product, index) => ({
+      id: index + 1,
+      name: product.name,
+      category: product.category || 'Produk',
+      price: Number(product.price),
+      description: product.description || '',
+      image: product.image_url ? product.image_url.split('/').pop() : `product_${index + 1}.jpg`
+    }));
+    
+    const dataJsonContent = JSON.stringify(productsData, null, 2);
+    
+    // Save data.json to user_generated_files
+    const { error: dataJsonError } = await supabase
+      .from('user_generated_files')
+      .upsert({
+        user_subscription_id: subscriptionId,
+        file_name: 'data.json',
+        html_content: dataJsonContent
+      }, {
+        onConflict: 'user_subscription_id,file_name'
+      });
+    
+    if (dataJsonError) throw dataJsonError;
+    
+    generatedFiles.push({
+      name: 'data.json',
+      content: dataJsonContent
     });
   }
   
@@ -263,13 +304,19 @@ export const UserGeneratedFileManager = ({ subscription }: UserGeneratedFileMana
               </div>
               <div className="border rounded-md h-full bg-white">
                 {activeFile && (
-                  <iframe
-                    key={activeFile.id}
-                    srcDoc={activeFile.html_content || ''}
-                    title={activeFile.file_name}
-                    className="w-full h-full border-0"
-                    sandbox="allow-scripts allow-same-origin"
-                  />
+                  activeFile.file_name.endsWith('.json') ? (
+                    <pre className="p-4 text-sm overflow-auto h-full whitespace-pre-wrap">
+                      {activeFile.html_content}
+                    </pre>
+                  ) : (
+                    <iframe
+                      key={activeFile.id}
+                      srcDoc={activeFile.html_content || ''}
+                      title={activeFile.file_name}
+                      className="w-full h-full border-0"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  )
                 )}
               </div>
             </div>
