@@ -1,8 +1,8 @@
-
 import BannerSlide from '@/components/BannerSlide';
 import ProductList from '@/components/ProductList';
 import ServiceList from '@/components/ServiceList';
 import AppFooter from '@/components/AppFooter';
+import WelcomePopup from '@/components/WelcomePopup';
 import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +55,8 @@ const Homepage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <WelcomePopup />
+      
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

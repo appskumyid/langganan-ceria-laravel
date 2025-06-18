@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import { Loader2 } from "lucide-react"
 
 // Schemas for form validation
@@ -61,6 +62,13 @@ const bannerFormSchema = z.object({
   banner_image_3: z.string().url("URL gambar 3 tidak valid.").min(1, "URL gambar 3 wajib diisi."),
 })
 
+const popupFormSchema = z.object({
+  popup_enabled: z.boolean(),
+  popup_title: z.string().min(1, "Judul popup wajib diisi."),
+  popup_content: z.string().min(1, "Konten popup wajib diisi."),
+  popup_image_url: z.string().url("URL gambar tidak valid.").optional().or(z.literal("")),
+})
+
 // Types
 type CompanyFormValues = z.infer<typeof companyFormSchema>
 type ContactFormValues = z.infer<typeof contactFormSchema>
@@ -68,6 +76,7 @@ type MailchimpFormValues = z.infer<typeof mailchimpFormSchema>
 type GatewayFormValues = z.infer<typeof gatewayFormSchema>
 type FooterFormValues = z.infer<typeof footerFormSchema>
 type BannerFormValues = z.infer<typeof bannerFormSchema>
+type PopupFormValues = z.infer<typeof popupFormSchema>
 
 // Function to fetch settings
 const fetchSettings = async () => {
@@ -118,6 +127,7 @@ export default function AdminSettings() {
       queryClient.invalidateQueries({ queryKey: ["contact_settings"] })
       queryClient.invalidateQueries({ queryKey: ["footer_settings"] })
       queryClient.invalidateQueries({ queryKey: ["banner_settings"] })
+      queryClient.invalidateQueries({ queryKey: ["popup_settings"] })
     },
     onError: (error) => {
       console.error("Failed to save settings mutation:", error)
@@ -179,6 +189,16 @@ export default function AdminSettings() {
     },
   })
 
+  const popupForm = useForm<PopupFormValues>({
+    resolver: zodResolver(popupFormSchema),
+    defaultValues: {
+      popup_enabled: false,
+      popup_title: "",
+      popup_content: "",
+      popup_image_url: "",
+    },
+  })
+
   useEffect(() => {
     if (settings) {
       console.log("Settings loaded, resetting forms:", settings)
@@ -210,8 +230,14 @@ export default function AdminSettings() {
         banner_image_2: settings.banner_image_2 || "",
         banner_image_3: settings.banner_image_3 || "",
       })
+      popupForm.reset({
+        popup_enabled: settings.popup_enabled === 'true',
+        popup_title: settings.popup_title || "",
+        popup_content: settings.popup_content || "",
+        popup_image_url: settings.popup_image_url || "",
+      })
     }
-  }, [settings, companyForm, contactForm, mailchimpForm, gatewayForm, footerForm, bannerForm])
+  }, [settings, companyForm, contactForm, mailchimpForm, gatewayForm, footerForm, bannerForm, popupForm])
 
   const onCompanySubmit = (values: CompanyFormValues) => {
     const settingsToSave = Object.entries(values).map(([key, value]) => ({
@@ -264,6 +290,15 @@ export default function AdminSettings() {
       value,
     }))
     console.log("Attempting to save Banner settings:", settingsToSave)
+    mutate(settingsToSave)
+  }
+
+  const onPopupSubmit = (values: PopupFormValues) => {
+    const settingsToSave = Object.entries(values).map(([key, value]) => ({
+      key,
+      value: typeof value === 'boolean' ? value.toString() : value,
+    }))
+    console.log("Attempting to save Popup settings:", settingsToSave)
     mutate(settingsToSave)
   }
   
@@ -600,6 +635,88 @@ export default function AdminSettings() {
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan Pengaturan Gateway
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Popup</CardTitle>
+          <CardDescription>
+            Atur popup yang akan muncul ketika pengguna pertama kali masuk ke website.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...popupForm}>
+            <form onSubmit={popupForm.handleSubmit(onPopupSubmit)} className="space-y-4">
+              <FormField
+                control={popupForm.control}
+                name="popup_enabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Aktifkan Popup</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Tampilkan popup ketika pengguna pertama kali masuk
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={popupForm.control}
+                name="popup_title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Judul Popup</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Masukkan judul popup" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={popupForm.control}
+                name="popup_content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Konten Popup</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Masukkan konten popup" 
+                        className="min-h-[100px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={popupForm.control}
+                name="popup_image_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Gambar Popup (Opsional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com/image.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan Popup
               </Button>
             </form>
           </Form>
