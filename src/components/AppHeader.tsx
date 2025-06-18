@@ -4,10 +4,28 @@ import { useToast } from "@/hooks/use-toast";
 import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+const fetchCompanyName = async () => {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'company_name')
+    .single();
+  
+  if (error) return 'KSAinovasi';
+  return data?.value || 'KSAinovasi';
+};
 
 const AppHeader = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+
+  const { data: companyName = 'KSAinovasi' } = useQuery({
+    queryKey: ['company_name'],
+    queryFn: fetchCompanyName,
+  });
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -37,7 +55,7 @@ const AppHeader = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <NavLink to="/" className="text-xl font-bold text-gray-900">
-            Sistem Langganan
+            {companyName}
           </NavLink>
           <div className="flex items-center space-x-6">
             <NavLink to="/home" className={getNavLinkClass}>
@@ -48,6 +66,9 @@ const AppHeader = () => {
             </NavLink>
             <NavLink to="/services" className={getNavLinkClass}>
               Service
+            </NavLink>
+            <NavLink to="/contact" className={getNavLinkClass}>
+              Contact
             </NavLink>
             {user ? (
               <>

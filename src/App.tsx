@@ -8,6 +8,7 @@ import Homepage from "./pages/Homepage";
 import Products from "./pages/Products";
 import Services from "./pages/Services";
 import Payment from "./pages/Payment";
+import Contact from "./pages/Contact";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -16,7 +17,7 @@ import AdminServices from "./pages/AdminServices";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
-import MySubscriptions from "./pages/MySubscriptions"; // Import baru
+import MySubscriptions from "./pages/MySubscriptions";
 import AdminSubscriptionDetail from './pages/AdminSubscriptionDetail';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import AdminUserDetail from "./pages/AdminUserDetail";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/home" element={<Homepage />} />
           <Route path="/products" element={<Products />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/contact" element={<Contact />} />
           <Route 
             path="/payment/:subscriptionId" 
             element={

@@ -27,6 +27,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 
 // Schemas for form validation
+const companyFormSchema = z.object({
+  company_name: z.string().min(1, "Nama perusahaan wajib diisi."),
+})
+
+const contactFormSchema = z.object({
+  contact_address: z.string().min(1, "Alamat wajib diisi."),
+  contact_whatsapp_number: z.string().min(1, "Nomor WhatsApp wajib diisi."),
+  contact_maps_embed_url: z.string().url("URL Google Maps tidak valid.").min(1, "URL Maps wajib diisi."),
+})
+
 const mailchimpFormSchema = z.object({
   mailchimp_api_key: z.string().min(1, "API Key wajib diisi."),
   mailchimp_list_id: z.string().min(1, "List ID wajib diisi."),
@@ -52,6 +62,8 @@ const bannerFormSchema = z.object({
 })
 
 // Types
+type CompanyFormValues = z.infer<typeof companyFormSchema>
+type ContactFormValues = z.infer<typeof contactFormSchema>
 type MailchimpFormValues = z.infer<typeof mailchimpFormSchema>
 type GatewayFormValues = z.infer<typeof gatewayFormSchema>
 type FooterFormValues = z.infer<typeof footerFormSchema>
@@ -102,12 +114,32 @@ export default function AdminSettings() {
       console.log("Settings saved successfully!")
       toast.success("Pengaturan berhasil disimpan!")
       queryClient.invalidateQueries({ queryKey: ["app_settings"] })
+      queryClient.invalidateQueries({ queryKey: ["company_name"] })
+      queryClient.invalidateQueries({ queryKey: ["contact_settings"] })
+      queryClient.invalidateQueries({ queryKey: ["footer_settings"] })
+      queryClient.invalidateQueries({ queryKey: ["banner_settings"] })
     },
     onError: (error) => {
       console.error("Failed to save settings mutation:", error)
       toast.error("Gagal menyimpan pengaturan:", {
         description: error.message,
       })
+    },
+  })
+
+  const companyForm = useForm<CompanyFormValues>({
+    resolver: zodResolver(companyFormSchema),
+    defaultValues: {
+      company_name: "",
+    },
+  })
+
+  const contactForm = useForm<ContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      contact_address: "",
+      contact_whatsapp_number: "",
+      contact_maps_embed_url: "",
     },
   })
 
@@ -150,6 +182,14 @@ export default function AdminSettings() {
   useEffect(() => {
     if (settings) {
       console.log("Settings loaded, resetting forms:", settings)
+      companyForm.reset({
+        company_name: settings.company_name || "",
+      })
+      contactForm.reset({
+        contact_address: settings.contact_address || "",
+        contact_whatsapp_number: settings.contact_whatsapp_number || "",
+        contact_maps_embed_url: settings.contact_maps_embed_url || "",
+      })
       mailchimpForm.reset({
         mailchimp_api_key: settings.mailchimp_api_key || "",
         mailchimp_list_id: settings.mailchimp_list_id || "",
@@ -171,7 +211,25 @@ export default function AdminSettings() {
         banner_image_3: settings.banner_image_3 || "",
       })
     }
-  }, [settings, mailchimpForm, gatewayForm, footerForm, bannerForm])
+  }, [settings, companyForm, contactForm, mailchimpForm, gatewayForm, footerForm, bannerForm])
+
+  const onCompanySubmit = (values: CompanyFormValues) => {
+    const settingsToSave = Object.entries(values).map(([key, value]) => ({
+      key,
+      value,
+    }))
+    console.log("Attempting to save Company settings:", settingsToSave)
+    mutate(settingsToSave)
+  }
+
+  const onContactSubmit = (values: ContactFormValues) => {
+    const settingsToSave = Object.entries(values).map(([key, value]) => ({
+      key,
+      value,
+    }))
+    console.log("Attempting to save Contact settings:", settingsToSave)
+    mutate(settingsToSave)
+  }
 
   const onMailchimpSubmit = (values: MailchimpFormValues) => {
     const settingsToSave = Object.entries(values).map(([key, value]) => ({
@@ -225,6 +283,96 @@ export default function AdminSettings() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Pengaturan</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Perusahaan</CardTitle>
+          <CardDescription>
+            Atur nama perusahaan yang akan ditampilkan di website.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...companyForm}>
+            <form onSubmit={companyForm.handleSubmit(onCompanySubmit)} className="space-y-4">
+              <FormField
+                control={companyForm.control}
+                name="company_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nama Perusahaan</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Masukkan nama perusahaan" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan Perusahaan
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Kontak</CardTitle>
+          <CardDescription>
+            Atur informasi kontak yang akan ditampilkan di halaman contact.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...contactForm}>
+            <form onSubmit={contactForm.handleSubmit(onContactSubmit)} className="space-y-4">
+              <FormField
+                control={contactForm.control}
+                name="contact_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alamat</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Masukkan alamat lengkap" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={contactForm.control}
+                name="contact_whatsapp_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nomor WhatsApp</FormLabel>
+                    <FormControl>
+                      <Input placeholder="628xxxxxxxxxx" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={contactForm.control}
+                name="contact_maps_embed_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Google Maps Embed</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://www.google.com/maps/embed?pb=..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Pengaturan Kontak
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
