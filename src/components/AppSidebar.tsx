@@ -1,5 +1,5 @@
 
-import { Home, Users, Package, LogOut, ListChecks, Settings, Briefcase } from "lucide-react"
+import { Home, Users, Package, LogOut, ListChecks, Settings, Briefcase, Globe } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserRole } from "@/hooks/useUserRole"
@@ -25,13 +25,15 @@ export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void })
   const { isAdmin } = useUserRole()
 
   const memberItems = [
-    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
+    { title: "Website", url: "/home", icon: Globe },
   ]
 
   const adminItems = [
-    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
+    { title: "Website", url: "/home", icon: Globe },
     { title: "Admin Dashboard", url: "/admin", icon: Users },
     { title: "Kelola Produk", url: "/admin/products", icon: Package },
     { title: "Kelola Layanan", url: "/admin/services", icon: Briefcase },

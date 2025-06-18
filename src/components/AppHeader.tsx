@@ -3,9 +3,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const fetchCompanyName = async () => {
   const { data, error } = await supabase
@@ -54,16 +60,48 @@ const AppHeader = () => {
     <header className="bg-white shadow-sm border-b sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <NavLink to="/" className="text-xl font-bold text-gray-900">
+          <NavLink to="/home" className="text-xl font-bold text-gray-900">
             {companyName}
           </NavLink>
           <div className="flex items-center space-x-6">
             <NavLink to="/home" className={getNavLinkClass}>
               Home
             </NavLink>
-            <NavLink to="/products" className={getNavLinkClass}>
-              Product
-            </NavLink>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Product
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-white border shadow-lg z-50">
+                <DropdownMenuItem>
+                  <NavLink to="/products?category=ecommerce" className="w-full">
+                    E-commerce
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <NavLink to="/products?category=pos" className="w-full">
+                    Point of Sales
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <NavLink to="/products?category=invitation" className="w-full">
+                    Undangan Online
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <NavLink to="/products?category=company-profile" className="w-full">
+                    Company Profile
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <NavLink to="/products?category=software" className="w-full">
+                    Software
+                  </NavLink>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <NavLink to="/services" className={getNavLinkClass}>
               Service
             </NavLink>
