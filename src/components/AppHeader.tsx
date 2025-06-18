@@ -110,7 +110,7 @@ const AppHeader = () => {
             </NavLink>
             {user ? (
               <>
-                <NavLink to="/" className={getNavLinkClass}>
+                <NavLink to="/dashboard" className={getNavLinkClass}>
                   Dashboard
                 </NavLink>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
