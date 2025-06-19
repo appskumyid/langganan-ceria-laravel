@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Phone } from "lucide-react";
-import { NavLink } from "react-router-dom";
 import { useManagedServices } from "@/hooks/useManagedServices";
 import { getIcon } from "@/lib/iconMap";
 import { Skeleton } from "@/components/ui/skeleton";
+import AppHeader from "@/components/AppHeader";
 
 const Services = () => {
   const { data: servicesData, isLoading, error } = useManagedServices();
@@ -25,47 +25,8 @@ const Services = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="text-xl font-bold text-gray-900">
-              Sistem Langganan
-            </div>
-            <div className="flex items-center space-x-6">
-              <NavLink 
-                to="/home" 
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Home
-              </NavLink>
-              <NavLink 
-                to="/products" 
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Product
-              </NavLink>
-              <NavLink 
-                to="/services" 
-                className="text-primary font-medium px-3 py-2 rounded-md text-sm"
-              >
-                Service
-              </NavLink>
-              <NavLink 
-                to="/auth" 
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Masuk
-              </NavLink>
-              <Button asChild>
-                <NavLink to="/auth">
-                  Daftar
-                </NavLink>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Use AppHeader instead of custom navigation */}
+      <AppHeader />
 
       {/* Header */}
       <div className="bg-white py-12">
