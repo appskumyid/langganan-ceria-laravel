@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import { Loader2, Plus, Edit, Trash2, Shield, FileText, Eye, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -43,6 +44,7 @@ interface ProductFormData {
   image: string;
   features: string;
   demoUrl: string;
+  subscriptionPeriods: string[];
 }
 
 const categories = [
@@ -51,6 +53,13 @@ const categories = [
   'CV / Portfolio',
   'Undangan Digital',
   'Aplikasi Bisnis (ERP, POS, LMS, dll)'
+];
+
+const periodOptions = [
+  { value: 'monthly', label: '1 Bulan', priceField: 'monthlyPrice' },
+  { value: 'quarterly', label: '3 Bulan', priceField: 'quarterlyPrice' },
+  { value: 'semiAnnual', label: '6 Bulan', priceField: 'semiAnnualPrice' },
+  { value: 'yearly', label: '1 Tahun', priceField: 'yearlyPrice' }
 ];
 
 const AdminProducts = () => {
@@ -78,7 +87,8 @@ const AdminProducts = () => {
       yearlyPrice: '',
       image: '',
       features: '',
-      demoUrl: ''
+      demoUrl: '',
+      subscriptionPeriods: ['monthly']
     }
   });
 
@@ -144,6 +154,7 @@ const AdminProducts = () => {
         image_url: data.image,
         features: featuresArray,
         demo_url: data.demoUrl,
+        subscription_periods: data.subscriptionPeriods,
       };
 
       const { error } = await supabase.from('managed_products').upsert(productToUpsert);
@@ -190,7 +201,6 @@ const AdminProducts = () => {
     }
   });
 
-
   const onSubmit = (data: ProductFormData) => {
     upsertProductMutation.mutate(data);
   };
@@ -198,6 +208,8 @@ const AdminProducts = () => {
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     const pricing = product.pricing as unknown as PricingPeriod;
+    const subscriptionPeriods = (product.subscription_periods as string[]) || ['monthly'];
+    
     form.reset({
       name: product.name,
       description: product.description ?? '',
@@ -209,7 +221,8 @@ const AdminProducts = () => {
       yearlyPrice: pricing.yearly || '',
       image: product.image_url ?? '',
       features: product.features?.join(', ') ?? '',
-      demoUrl: product.demo_url ?? ''
+      demoUrl: product.demo_url ?? '',
+      subscriptionPeriods: subscriptionPeriods
     });
     setIsDialogOpen(true);
   };
@@ -393,6 +406,54 @@ const AdminProducts = () => {
                 />
 
                 <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Periode Langganan Tersedia</h3>
+                  <FormField
+                    control={form.control}
+                    name="subscriptionPeriods"
+                    render={() => (
+                      <FormItem>
+                        <div className="grid grid-cols-2 gap-4">
+                          {periodOptions.map((period) => (
+                            <FormField
+                              key={period.value}
+                              control={form.control}
+                              name="subscriptionPeriods"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={period.value}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(period.value)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...field.value, period.value])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== period.value
+                                                )
+                                              )
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                      {period.label}
+                                    </FormLabel>
+                                  </FormItem>
+                                )
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Harga Berdasarkan Periode</h3>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -486,7 +547,7 @@ const AdminProducts = () => {
                   control={form.control}
                   name="demoUrl"
                   render={({ field }) => (
-                    <FormItem>
+                        <FormItem>
                       <FormLabel>URL Demo</FormLabel>
                       <FormControl>
                         <Input placeholder="https://demo.example.com" {...field} />
@@ -547,102 +608,128 @@ const AdminProducts = () => {
                 <TableHead>Nama Produk</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Kategori</TableHead>
+                <TableHead>Periode Tersedia</TableHead>
                 <TableHead>Harga</TableHead>
                 <TableHead>Fitur</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <img
-                      src={product.image_url || '/placeholder.svg'}
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-500">{product.description}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.type === 'Premium' ? 'default' : 'secondary'}>
-                      {product.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.category}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="text-sm">
-                        <span className="font-semibold">Bulanan:</span> {(product.pricing as unknown as PricingPeriod).monthly}
+              {products.map((product) => {
+                const subscriptionPeriods = (product.subscription_periods as string[]) || ['monthly'];
+                const pricing = product.pricing as unknown as PricingPeriod;
+                
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <img
+                        src={product.image_url || '/placeholder.svg'}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-gray-500">{product.description}</p>
                       </div>
-                      <div className="text-sm">
-                        <span className="font-semibold">3 Bulan:</span> {(product.pricing as unknown as PricingPeriod).quarterly}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.type === 'Premium' ? 'default' : 'secondary'}>
+                        {product.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{product.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {subscriptionPeriods.map((period) => {
+                          const periodLabel = periodOptions.find(p => p.value === period)?.label || period;
+                          return (
+                            <Badge key={period} variant="secondary" className="text-xs">
+                              {periodLabel}
+                            </Badge>
+                          );
+                        })}
                       </div>
-                      <div className="text-sm">
-                        <span className="font-semibold">6 Bulan:</span> {(product.pricing as unknown as PricingPeriod).semiAnnual}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {subscriptionPeriods.includes('monthly') && pricing.monthly && (
+                          <div className="text-sm">
+                            <span className="font-semibold">Bulanan:</span> {pricing.monthly}
+                          </div>
+                        )}
+                        {subscriptionPeriods.includes('quarterly') && pricing.quarterly && (
+                          <div className="text-sm">
+                            <span className="font-semibold">3 Bulan:</span> {pricing.quarterly}
+                          </div>
+                        )}
+                        {subscriptionPeriods.includes('semiAnnual') && pricing.semiAnnual && (
+                          <div className="text-sm">
+                            <span className="font-semibold">6 Bulan:</span> {pricing.semiAnnual}
+                          </div>
+                        )}
+                        {subscriptionPeriods.includes('yearly') && pricing.yearly && (
+                          <div className="text-sm">
+                            <span className="font-semibold">Tahunan:</span> {pricing.yearly}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-sm">
-                        <span className="font-semibold">Tahunan:</span> {(product.pricing as unknown as PricingPeriod).yearly}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(product.features || []).slice(0, 3).map((feature, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {feature}
+                          </Badge>
+                        ))}
+                        {(product.features?.length || 0) > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{(product.features?.length || 0) - 3} lainnya
+                          </Badge>
+                        )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(product.features || []).slice(0, 3).map((feature, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {feature}
-                        </Badge>
-                      ))}
-                      {(product.features?.length || 0) > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{(product.features?.length || 0) - 3} lainnya
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePreview(product)}
-                        title="Pratinjau Produk"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleManageFiles(product)}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(product.id)}
-                        disabled={deleteProductMutation.isPending}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreview(product)}
+                          title="Pratinjau Produk"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManageFiles(product)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                          disabled={deleteProductMutation.isPending}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

@@ -256,6 +256,7 @@ export type Database = {
           image_url: string | null
           name: string
           pricing: Json
+          subscription_periods: Json | null
           type: Database["public"]["Enums"]["product_type_enum"]
           updated_at: string
         }
@@ -269,6 +270,7 @@ export type Database = {
           image_url?: string | null
           name: string
           pricing: Json
+          subscription_periods?: Json | null
           type: Database["public"]["Enums"]["product_type_enum"]
           updated_at?: string
         }
@@ -282,6 +284,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           pricing?: Json
+          subscription_periods?: Json | null
           type?: Database["public"]["Enums"]["product_type_enum"]
           updated_at?: string
         }
@@ -402,6 +405,7 @@ export type Database = {
           name: string
           period: string
           price: string
+          subscription_periods: Json | null
           type: Database["public"]["Enums"]["product_type_enum"]
         }
         Insert: {
@@ -415,6 +419,7 @@ export type Database = {
           name: string
           period: string
           price: string
+          subscription_periods?: Json | null
           type: Database["public"]["Enums"]["product_type_enum"]
         }
         Update: {
@@ -428,6 +433,7 @@ export type Database = {
           name?: string
           period?: string
           price?: string
+          subscription_periods?: Json | null
           type?: Database["public"]["Enums"]["product_type_enum"]
         }
         Relationships: []
@@ -742,6 +748,7 @@ export type Database = {
           image_url: string | null
           name: string
           pricing: Json
+          subscription_periods: Json | null
           type: Database["public"]["Enums"]["product_type_enum"]
           updated_at: string
         }[]
