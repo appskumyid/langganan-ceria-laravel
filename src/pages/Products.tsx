@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -131,6 +130,11 @@ const Products = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  const formatPrice = (price: string | number) => {
+    const numericPrice = parseInt(String(price).replace(/[^0-9]/g, ''));
+    return `Rp ${numericPrice.toLocaleString('id-ID')}`;
+  };
+
   const renderContent = () => {
     if (isLoading && !productsData.length) {
        return (
@@ -163,16 +167,37 @@ const Products = () => {
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {productsData.length > 0 ? (
-            productsData.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                product={product}
-                onSubscribe={handleSubscribe}
-                onDemo={handleDemo}
-                onDetail={handleDetail}
-                onWhatsApp={handleWhatsApp}
-              />
-            ))
+            productsData.map((product) => {
+              // Parse pricing to get available options
+              let pricing: any[] = [];
+              const productPricing = product.pricing;
+
+              if (productPricing && typeof productPricing === 'object' && !Array.isArray(productPricing)) {
+                pricing = Object.entries(productPricing)
+                  .filter(([, price]) => price != null && String(price).trim() !== '')
+                  .map(([period, price]) => ({ period, price }));
+              }
+
+              const monthlyPriceInfo = pricing.find(p => p.period?.toLowerCase() === 'monthly');
+              const displayPriceInfo = monthlyPriceInfo || (pricing.length > 0 ? pricing[0] : null);
+              const displayPrice = displayPriceInfo ? parseInt(String(displayPriceInfo.price).replace(/[^0-9]/g, '')) : 0;
+
+              return (
+                <ProductCard 
+                  key={product.id} 
+                  product={{
+                    ...product,
+                    // Enhanced product data for better display
+                    formattedPrice: displayPrice > 0 ? formatPrice(displayPrice) : 'Hubungi kami',
+                    pricingOptions: pricing.length,
+                  }}
+                  onSubscribe={handleSubscribe}
+                  onDemo={handleDemo}
+                  onDetail={handleDetail}
+                  onWhatsApp={handleWhatsApp}
+                />
+              )
+            })
           ) : (
             <div className="col-span-full text-center py-12">
               <p className="text-gray-500 text-lg">
@@ -221,7 +246,7 @@ const Products = () => {
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           product={{
-            id: 0, // Using placeholder ID due to system limitations
+            id: 0,
             name: selectedProduct.name,
             price: (selectedProduct.pricing as any)?.monthly || '0',
             period: (selectedProduct.pricing as any)?.monthly ? '/bulan' : '',

@@ -49,6 +49,11 @@ const ProductList = () => {
     }
   };
 
+  const formatPrice = (price: string | number) => {
+    const numericPrice = parseInt(String(price).replace(/[^0-9]/g, ''));
+    return `Rp ${numericPrice.toLocaleString('id-ID')}`;
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -166,12 +171,17 @@ const ProductList = () => {
                 
                 <div className="mb-4">
                   <span className="text-2xl font-bold text-primary">
-                    {displayPrice > 0 ? `Rp${displayPrice.toLocaleString('id-ID')}`: 'Hubungi kami'}
+                    {displayPrice > 0 ? formatPrice(displayPrice) : 'Hubungi kami'}
                   </span>
                   {displayPrice > 0 && displayPriceInfo && displayPriceInfo.period && (
                     <span className="text-sm text-muted-foreground">
                       {getPeriodText(displayPriceInfo.period)}
                     </span>
+                  )}
+                  {pricing.length > 1 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mulai dari • Tersedia {pricing.length} paket
+                    </p>
                   )}
                 </div>
 
@@ -179,11 +189,16 @@ const ProductList = () => {
                   <div className="mb-4">
                     <h4 className="font-semibold mb-2">Fitur:</h4>
                     <div className="flex flex-wrap gap-1">
-                      {product.features.map((feature, index) => (
+                      {product.features.slice(0, 3).map((feature, index) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {feature}
                         </Badge>
                       ))}
+                      {product.features.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{product.features.length - 3} lainnya
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}

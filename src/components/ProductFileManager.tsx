@@ -251,6 +251,9 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
                 <TableCell>{new Date(file.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex space-x-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => handlePreviewFile(file)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(file)}>
                       <Edit className="h-4 w-4" />
                     </Button>

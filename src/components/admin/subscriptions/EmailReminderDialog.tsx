@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Mail, X } from "lucide-react";
+import { Mail, X, MessageCircle } from "lucide-react";
 import type { Subscription } from './utils';
 import type { UseMutationResult } from '@tanstack/react-query';
 
@@ -102,6 +102,15 @@ export const EmailReminderDialog = ({
     }
   };
 
+  const handleSendWhatsApp = () => {
+    if (subscription && emailContent) {
+      const whatsappMessage = `${subject}\n\n${emailContent}`;
+      const phoneNumber = subscription.customer_phone?.replace(/[^0-9]/g, '');
+      const whatsappUrl = `https://wa.me/62${phoneNumber?.startsWith('0') ? phoneNumber.substring(1) : phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
+
   const handleClose = () => {
     onOpenChange(false);
     setSelectedTemplate('');
@@ -117,7 +126,7 @@ export const EmailReminderDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Kirim Email Peringatan
+            Kirim Peringatan
           </DialogTitle>
         </DialogHeader>
 
@@ -126,16 +135,17 @@ export const EmailReminderDialog = ({
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-medium mb-2">Detail Pelanggan:</h4>
             <p><strong>Email:</strong> {subscription.customer_email}</p>
+            <p><strong>WhatsApp:</strong> {subscription.customer_phone}</p>
             <p><strong>Produk:</strong> {subscription.product_name}</p>
             <p><strong>Tanggal Expired:</strong> {subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString('id-ID') : 'Tidak ditentukan'}</p>
           </div>
 
           {/* Template Selection */}
           <div className="space-y-2">
-            <Label htmlFor="template">Template Email</Label>
+            <Label htmlFor="template">Template Pesan</Label>
             <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih template email..." />
+                <SelectValue placeholder="Pilih template pesan..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="expiring">Langganan akan berakhir</SelectItem>
@@ -155,20 +165,20 @@ export const EmailReminderDialog = ({
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md"
-                placeholder="Subject email..."
+                placeholder="Subject pesan..."
               />
             </div>
           )}
 
-          {/* Email Content */}
+          {/* Message Content */}
           {selectedTemplate && (
             <div className="space-y-2">
-              <Label htmlFor="content">Isi Email</Label>
+              <Label htmlFor="content">Isi Pesan</Label>
               <Textarea
                 id="content"
                 value={emailContent}
                 onChange={(e) => setEmailContent(e.target.value)}
-                placeholder="Isi email..."
+                placeholder="Isi pesan..."
                 className="min-h-[200px]"
               />
             </div>
@@ -179,6 +189,14 @@ export const EmailReminderDialog = ({
             <Button variant="outline" onClick={handleClose}>
               <X className="h-4 w-4 mr-2" />
               Batal
+            </Button>
+            <Button 
+              onClick={handleSendWhatsApp} 
+              disabled={!emailContent || !subject}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Kirim WhatsApp
             </Button>
             <Button 
               onClick={handleSendEmail} 
