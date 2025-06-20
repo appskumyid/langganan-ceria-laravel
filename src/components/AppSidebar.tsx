@@ -1,101 +1,87 @@
 
-import { Home, Users, Package, LogOut, ListChecks, Settings, Briefcase, Globe } from "lucide-react"
-import { NavLink, useLocation } from "react-router-dom"
-import { useAuth } from "@/hooks/useAuth"
-import { useUserRole } from "@/hooks/useUserRole"
-
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
+  SidebarRail,
 } from "@/components/ui/sidebar"
+import { Home, User, ShoppingBag, Package, Receipt, Settings, Users, Briefcase } from "lucide-react"
+import { Link } from "react-router-dom"
+import { useUserRole } from "@/hooks/useUserRole"
 
-export function AppSidebar({ onSettingsClick }: { onSettingsClick: () => void }) {
-  const { state } = useSidebar()
-  const location = useLocation()
-  const currentPath = location.pathname
-  const { signOut } = useAuth()
-  const { isAdmin } = useUserRole()
+const AppSidebar = () => {
+  const { isAdmin } = useUserRole();
 
-  const memberItems = [
-    { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
-    { title: "Website", url: "/home", icon: Globe },
-  ]
+  const menuItems = [
+    {
+      title: "Dashboard",
+      icon: Home,
+      href: "/dashboard",
+      adminOnly: false,
+    },
+    {
+      title: "Langganan Saya",
+      icon: Package,
+      href: "/my-subscriptions",
+      adminOnly: false,
+    },
+    {
+      title: "Riwayat Transaksi",
+      icon: Receipt,
+      href: "/transaction-history",
+      adminOnly: false,
+    },
+    {
+      title: "Admin Dashboard",
+      icon: Settings,
+      href: "/admin",
+      adminOnly: true,
+    },
+    {
+      title: "Kelola Produk",
+      icon: ShoppingBag,
+      href: "/admin/products",
+      adminOnly: true,
+    },
+    {
+      title: "Kelola Layanan",
+      icon: Briefcase,
+      href: "/admin/services",
+      adminOnly: true,
+    },
+  ];
 
-  const adminItems = [
-    { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "Langganan Saya", url: "/my-subscriptions", icon: ListChecks },
-    { title: "Website", url: "/home", icon: Globe },
-    { title: "Admin Dashboard", url: "/admin", icon: Users },
-    { title: "Kelola Produk", url: "/admin/products", icon: Package },
-    { title: "Kelola Layanan", url: "/admin/services", icon: Briefcase },
-  ]
-
-  const items = isAdmin ? adminItems : memberItems
-
-  const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
-
-  const handleSignOut = async () => {
-    await signOut()
-  }
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.adminOnly || (item.adminOnly && isAdmin)
+  );
 
   return (
-    <Sidebar
-      className={state === "collapsed" ? "w-14" : "w-60"}
-      collapsible="offcanvas"
-    >
-      <SidebarTrigger className="m-2 self-end" />
-
+    <Sidebar>
+      <SidebarHeader>
+        <div className="px-4 py-2">
+          <h2 className="text-lg font-semibold">Menu</h2>
+        </div>
+      </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Utama</SidebarGroupLabel>
-
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {state !== "collapsed" && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={onSettingsClick}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    {state !== "collapsed" && <span>Pengaturan</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {state !== "collapsed" && <span>Keluar</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <SidebarMenu>
+          {filteredMenuItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <Link to={item.href} className="flex items-center gap-2">
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   )
 }
+
+export default AppSidebar;

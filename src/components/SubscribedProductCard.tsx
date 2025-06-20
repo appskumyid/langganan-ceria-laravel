@@ -1,7 +1,8 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
 import { getStatusVariant } from "./admin/subscriptions/utils";
@@ -11,6 +12,18 @@ interface SubscribedProductCardProps {
 }
 
 const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => {
+  // Generate transaction number based on subscription ID and created date
+  const generateTransactionNumber = (id: string, createdAt: string) => {
+    const date = new Date(createdAt);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const shortId = id.slice(0, 8).toUpperCase();
+    return `TRX${year}${month}${day}${shortId}`;
+  };
+
+  const transactionNumber = generateTransactionNumber(subscription.id, subscription.created_at);
+
   return (
     <Card>
       <CardHeader>
@@ -18,6 +31,7 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
         <CardDescription>
           Kategori: {subscription.product_category} - Tipe: {subscription.product_type}
         </CardDescription>
+        <div className="text-xs text-gray-500">#{transactionNumber}</div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-between items-center">
@@ -52,8 +66,8 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
             <Clock className="mr-2 h-4 w-4" />
             Menunggu Konfirmasi
           </Button>
-        ) : (
-          <>
+        ) : subscription.subscription_status === 'active' ? (
+          <div className="space-y-2">
             {subscription.product_category === 'E-Commerce' && subscription.product_type === 'Non-Premium' && (
                <Button asChild className="w-full">
                 <Link to={`/my-subscriptions/${subscription.id}/edit-store`}>
@@ -62,11 +76,30 @@ const SubscribedProductCard = ({ subscription }: SubscribedProductCardProps) => 
               </Button>
             )}
             {(subscription.product_category !== 'E-Commerce' || subscription.product_type !== 'Non-Premium') && (
-              <Button variant="outline" className="w-full" disabled>
-                Lihat Detail (Segera Hadir)
+              <Button asChild variant="outline" className="w-full">
+                <Link to={`/my-subscriptions/${subscription.id}`}>
+                  Lihat Detail <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             )}
-          </>
+            <Button asChild className="w-full bg-green-600 hover:bg-green-700">
+              <Link to={`/renew/${subscription.id}`}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Perpanjang Langganan
+              </Link>
+            </Button>
+          </div>
+        ) : subscription.subscription_status === 'expired' ? (
+          <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
+            <Link to={`/renew/${subscription.id}`}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Perpanjang Langganan
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="outline" className="w-full" disabled>
+            Tidak Tersedia
+          </Button>
         )}
       </CardContent>
     </Card>

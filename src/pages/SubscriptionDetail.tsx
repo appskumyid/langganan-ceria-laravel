@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { Badge, badgeVariants } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import type { VariantProps } from 'class-variance-authority';
 import SubscriptionManagementForms from '@/components/SubscriptionManagementForms';
 
@@ -66,15 +68,41 @@ const SubscriptionDetail = () => {
       return <div className="text-center py-8">Langganan tidak ditemukan.</div>;
   }
 
+  // Generate transaction number
+  const generateTransactionNumber = (id: string, createdAt: string) => {
+    const date = new Date(createdAt);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const shortId = id.slice(0, 8).toUpperCase();
+    return `TRX${year}${month}${day}${shortId}`;
+  };
+
+  const transactionNumber = generateTransactionNumber(subscription.id, subscription.created_at);
+
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-900">Detail Langganan Anda</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Detail Langganan Anda</h1>
+        {(subscription.subscription_status === 'active' || subscription.subscription_status === 'expired') && (
+          <Button asChild className="bg-green-600 hover:bg-green-700">
+            <Link to={`/renew/${subscription.id}`}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Perpanjang Langganan
+            </Link>
+          </Button>
+        )}
+      </div>
+      
       <Card>
         <CardHeader>
           <CardTitle>{subscription.product_name}</CardTitle>
           <CardDescription>
             ID Langganan: {subscription.id}
           </CardDescription>
+          <div className="text-sm text-gray-600">
+            Nomor Transaksi: #{transactionNumber}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">

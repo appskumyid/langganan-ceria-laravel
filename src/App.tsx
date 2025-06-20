@@ -21,6 +21,7 @@ import MySubscriptions from "./pages/MySubscriptions";
 import AdminSubscriptionDetail from './pages/AdminSubscriptionDetail';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import AdminUserDetail from "./pages/AdminUserDetail";
+import TransactionHistory from "./pages/TransactionHistory";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,30 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <SubscriptionDetail />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/transaction-history" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TransactionHistory />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          {/* Placeholder for renewal page - you can implement this later */}
+          <Route 
+            path="/renew/:subscriptionId" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <div className="p-6 text-center">
+                    <h1 className="text-2xl font-bold mb-4">Perpanjangan Langganan</h1>
+                    <p className="text-gray-600">Fitur perpanjangan langganan akan segera tersedia.</p>
+                  </div>
                 </Layout>
               </ProtectedRoute>
             } 

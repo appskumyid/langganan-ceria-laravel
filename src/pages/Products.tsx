@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -185,12 +186,7 @@ const Products = () => {
               return (
                 <ProductCard 
                   key={product.id} 
-                  product={{
-                    ...product,
-                    // Enhanced product data for better display
-                    formattedPrice: displayPrice > 0 ? formatPrice(displayPrice) : 'Hubungi kami',
-                    pricingOptions: pricing.length,
-                  }}
+                  product={product}
                   onSubscribe={handleSubscribe}
                   onDemo={handleDemo}
                   onDetail={handleDetail}
