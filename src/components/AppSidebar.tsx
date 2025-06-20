@@ -9,11 +9,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Home, User, ShoppingBag, Package, Receipt, Settings, Users, Briefcase } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useUserRole } from "@/hooks/useUserRole"
 
 const AppSidebar = () => {
   const { isAdmin } = useUserRole();
+  const navigate = useNavigate();
 
   const menuItems = [
     {

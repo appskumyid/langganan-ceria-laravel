@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -15,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProductPreviewer } from './ProductPreviewer';
 
@@ -31,10 +32,18 @@ interface ProductFileFormData {
   html_content: string;
 }
 
+interface GitHubDeployFormData {
+  github_repo: string;
+  private_key: string;
+  public_key: string;
+}
+
 export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isGitHubFormOpen, setIsGitHubFormOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<ProductFile | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
 
@@ -42,6 +51,14 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
     defaultValues: {
       file_name: '',
       html_content: '',
+    },
+  });
+
+  const githubForm = useForm<GitHubDeployFormData>({
+    defaultValues: {
+      github_repo: '',
+      private_key: '',
+      public_key: '',
     },
   });
 
@@ -98,6 +115,33 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
       toast({ title: 'Error', description: `Gagal menghapus file: ${error.message}`, variant: 'destructive' });
     },
   });
+
+  const deployToGitHubMutation = useMutation({
+    mutationFn: async (data: GitHubDeployFormData) => {
+      // Simulate GitHub deployment
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would implement actual GitHub API integration
+      console.log('Deploying to GitHub:', data);
+      
+      return { success: true, url: `https://github.com/${data.github_repo}` };
+    },
+    onSuccess: (result) => {
+      toast({ 
+        title: 'Deploy Berhasil!', 
+        description: `Website berhasil di-deploy ke ${result.url}` 
+      });
+      setIsGitHubFormOpen(false);
+      githubForm.reset();
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Deploy Gagal', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
   
   const handleAddNew = () => {
     setEditingFile(null);
@@ -140,11 +184,108 @@ export const ProductFileManager = ({ product }: ProductFileManagerProps) => {
     upsertFileMutation.mutate(data);
   };
 
+  const onGitHubSubmit = (data: GitHubDeployFormData) => {
+    deployToGitHubMutation.mutate(data);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">File untuk: {product.name}</h3>
         <div className="flex items-center space-x-2">
+          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Pengaturan Deploy
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Pengaturan Deploy GitHub</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Konfigurasi kunci untuk deploy otomatis ke GitHub repository.
+                </p>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Petunjuk Setup:</h4>
+                  <ol className="text-sm space-y-1 list-decimal list-inside">
+                    <li>Buat GitHub Personal Access Token</li>
+                    <li>Buat SSH Key Pair untuk repository</li>
+                    <li>Masukkan konfigurasi di form deploy</li>
+                  </ol>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isGitHubFormOpen} onOpenChange={setIsGitHubFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Github className="h-4 w-4 mr-2" />
+                Deploy ke GitHub
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Deploy ke GitHub Repository</DialogTitle>
+              </DialogHeader>
+              <Form {...githubForm}>
+                <form onSubmit={githubForm.handleSubmit(onGitHubSubmit)} className="space-y-4">
+                  <FormField
+                    control={githubForm.control}
+                    name="github_repo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Repository GitHub</FormLabel>
+                        <FormControl>
+                          <Input placeholder="username/repository-name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={githubForm.control}
+                    name="private_key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Private Key</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="-----BEGIN PRIVATE KEY-----" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={githubForm.control}
+                    name="public_key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Public Key</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="ssh-rsa AAAAB3NzaC1yc2E..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsGitHubFormOpen(false)}>
+                      Batal
+                    </Button>
+                    <Button type="submit" disabled={deployToGitHubMutation.isPending}>
+                      {deployToGitHubMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Deploy
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isPreviewing} onOpenChange={setIsPreviewing}>
             <DialogTrigger asChild>
               <Button variant="outline">

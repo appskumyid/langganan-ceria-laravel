@@ -21,7 +21,6 @@ export default function Layout({ children }: LayoutProps) {
     setView('main');
   }, [location.pathname]);
 
-
   const handleSettingsClick = () => {
     setView(current => current === 'main' ? 'settings' : 'main')
   }
@@ -29,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar onSettingsClick={handleSettingsClick} />
+        <AppSidebar />
         
         <div className="flex-1 flex flex-col">
           <header className="h-16 flex items-center border-b bg-white">
