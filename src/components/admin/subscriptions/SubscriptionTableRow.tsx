@@ -14,8 +14,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Edit, Eye } from 'lucide-react';
+import { Loader2, Edit, Eye, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { differenceInMonths } from 'date-fns';
 import type { Subscription } from './utils';
 import { getStatusVariant } from './utils';
 import type { UseMutationResult } from '@tanstack/react-query';
@@ -25,10 +26,32 @@ interface SubscriptionTableRowProps {
     onApprove: (id: string, period: string) => void;
     onReject: (id: string) => void;
     onOpenEdit: (subscription: Subscription) => void;
+    onOpenEmailReminder: (subscription: Subscription) => void;
     updateMutation: UseMutationResult<void, Error, { id: string; status: string; expires_at?: string | null | undefined; rejection_reason?: string | null | undefined; }, unknown>;
+    sendEmailMutation: UseMutationResult<any, Error, { to: string, subject: string, message: string, customerName: string }, unknown>;
 }
 
-export const SubscriptionTableRow = ({ subscription, onApprove, onReject, onOpenEdit, updateMutation }: SubscriptionTableRowProps) => {
+export const SubscriptionTableRow = ({ 
+    subscription, 
+    onApprove, 
+    onReject, 
+    onOpenEdit, 
+    onOpenEmailReminder,
+    updateMutation,
+    sendEmailMutation
+}: SubscriptionTableRowProps) => {
+    
+    const calculateActivePeriod = () => {
+        if (!subscription.expires_at || !subscription.subscribed_at) return '-';
+        
+        const startDate = new Date(subscription.subscribed_at);
+        const endDate = new Date(subscription.expires_at);
+        const months = differenceInMonths(endDate, startDate);
+        
+        if (months === 0) return '< 1 bulan';
+        return `${months} bulan`;
+    };
+
     return (
         <TableRow key={subscription.id}>
             <TableCell>
@@ -42,8 +65,25 @@ export const SubscriptionTableRow = ({ subscription, onApprove, onReject, onOpen
                 </Badge>
             </TableCell>
             <TableCell>{new Date(subscription.created_at).toLocaleDateString('id-ID')}</TableCell>
+            <TableCell>
+                {subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString('id-ID') : '-'}
+            </TableCell>
+            <TableCell>{calculateActivePeriod()}</TableCell>
             <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
+                    {/* Email Reminder Button - only for active subscriptions */}
+                    {subscription.subscription_status === 'active' && (
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => onOpenEmailReminder(subscription)}
+                            disabled={sendEmailMutation.isPending}
+                            title="Kirim Email Peringatan"
+                        >
+                            <Mail className="h-4 w-4" />
+                        </Button>
+                    )}
+
                     {subscription.subscription_status === 'waiting_confirmation' ? (
                         <>
                             {subscription.payment_proof_url && (
