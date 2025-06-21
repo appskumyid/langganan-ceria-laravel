@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -15,12 +14,16 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw, Server, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SSHKeyManager } from '@/components/ssh-keys/SSHKeyManager';
+import { DeployConfigManager } from '@/components/deploy/DeployConfigManager';
 
 type Product = Tables<'managed_products'>;
 type UserGeneratedFile = Tables<'user_generated_files'>;
+type DeployConfig = Tables<'deploy_configs'>;
 
 interface GeneratedFileManagerProps {
   product: Product;
@@ -31,19 +34,18 @@ interface FileFormData {
   html_content: string;
 }
 
-interface GitHubDeployFormData {
-  github_repo: string;
-  private_key: string;
-  public_key: string;
+interface DeployFormData {
+  deploy_config_id: string;
 }
 
 export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isGitHubFormOpen, setIsGitHubFormOpen] = useState(false);
+  const [isDeployFormOpen, setIsDeployFormOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<UserGeneratedFile | null>(null);
+  const [activeTab, setActiveTab] = useState<'ssh-keys' | 'deploy-configs'>('ssh-keys');
 
   const form = useForm<FileFormData>({
     defaultValues: {
@@ -52,11 +54,9 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
-  const githubForm = useForm<GitHubDeployFormData>({
+  const deployForm = useForm<DeployFormData>({
     defaultValues: {
-      github_repo: '',
-      private_key: '',
-      public_key: '',
+      deploy_config_id: '',
     },
   });
 
@@ -88,6 +88,20 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
+  const { data: deployConfigs } = useQuery({
+    queryKey: ['deploy_configs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deploy_configs')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Regenerate files
   const regenerateFilesMutation = useMutation({
     mutationFn: async () => {
       // Simulate file regeneration - in real app this would regenerate files
@@ -103,6 +117,7 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
+  // Download ZIP
   const downloadZipMutation = useMutation({
     mutationFn: async () => {
       if (!files || files.length === 0) {
@@ -140,6 +155,7 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
+  // Save file
   const saveFileMutation = useMutation({
     mutationFn: async (data: FileFormData) => {
       if (!editingFile) {
@@ -169,6 +185,7 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
+  // Delete file
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
       const { error } = await supabase
@@ -188,18 +205,32 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
-  const deployToGitHubMutation = useMutation({
-    mutationFn: async (data: GitHubDeployFormData) => {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return { success: true, url: `https://github.com/${data.github_repo}` };
+  // Deploy website
+  const deployMutation = useMutation({
+    mutationFn: async (data: DeployFormData) => {
+      const deployConfig = deployConfigs?.find(config => config.id === data.deploy_config_id);
+      if (!deployConfig) {
+        throw new Error('Deploy configuration tidak ditemukan');
+      }
+
+      // Simulate deploy process
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      return { 
+        success: true, 
+        config: deployConfig,
+        url: deployConfig.type === 'github' 
+          ? `https://github.com/${deployConfig.github_repo}` 
+          : `http://${deployConfig.server_ip}`
+      };
     },
     onSuccess: (result) => {
       toast({ 
         title: 'Deploy Berhasil!', 
-        description: `Website berhasil di-deploy ke ${result.url}` 
+        description: `Website berhasil di-deploy ke ${result.config.name}` 
       });
-      setIsGitHubFormOpen(false);
-      githubForm.reset();
+      setIsDeployFormOpen(false);
+      deployForm.reset();
     },
     onError: (error) => {
       toast({ 
@@ -210,6 +241,7 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     },
   });
 
+  // Handle edit file
   const handleEdit = (file: UserGeneratedFile) => {
     setEditingFile(file);
     form.reset({
@@ -219,6 +251,7 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     setIsFormOpen(true);
   };
 
+  // Handle preview file
   const handlePreviewFile = (file: UserGeneratedFile) => {
     const newWindow = window.open();
     if (newWindow) {
@@ -235,18 +268,21 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
     }
   };
 
+  // Handle delete file
   const handleDelete = (fileId: string) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus file ini?')) {
       deleteFileMutation.mutate(fileId);
     }
   };
 
+  // Handle form submission
   const onSubmit = (data: FileFormData) => {
     saveFileMutation.mutate(data);
   };
 
-  const onGitHubSubmit = (data: GitHubDeployFormData) => {
-    deployToGitHubMutation.mutate(data);
+  // Handle deploy form submission
+  const onDeploySubmit = (data: DeployFormData) => {
+    deployMutation.mutate(data);
   };
 
   return (
@@ -295,84 +331,81 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
                   Pengaturan Deploy
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-4xl max-h-[90vh]">
                 <DialogHeader>
-                  <DialogTitle>Pengaturan Deploy GitHub</DialogTitle>
+                  <DialogTitle>Pengaturan Deploy</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Konfigurasi kunci untuk deploy otomatis ke GitHub repository.
-                  </p>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium mb-2">Petunjuk Setup:</h4>
-                    <ol className="text-sm space-y-1 list-decimal list-inside">
-                      <li>Buat GitHub Personal Access Token</li>
-                      <li>Buat SSH Key Pair untuk repository</li>
-                      <li>Masukkan konfigurasi di form deploy</li>
-                    </ol>
-                  </div>
+                <div className="flex border-b">
+                  <button
+                    className={`px-4 py-2 font-medium ${activeTab === 'ssh-keys' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('ssh-keys')}
+                  >
+                    SSH Keys
+                  </button>
+                  <button
+                    className={`px-4 py-2 font-medium ${activeTab === 'deploy-configs' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('deploy-configs')}
+                  >
+                    Deploy Configurations
+                  </button>
+                </div>
+                <div className="mt-4">
+                  {activeTab === 'ssh-keys' && <SSHKeyManager />}
+                  {activeTab === 'deploy-configs' && <DeployConfigManager />}
                 </div>
               </DialogContent>
             </Dialog>
 
-            <Dialog open={isGitHubFormOpen} onOpenChange={setIsGitHubFormOpen}>
+            <Dialog open={isDeployFormOpen} onOpenChange={setIsDeployFormOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Github className="h-4 w-4 mr-2" />
-                  Deploy ke GitHub
+                <Button disabled={!files || files.length === 0}>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Deploy Website
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Deploy ke GitHub Repository</DialogTitle>
+                  <DialogTitle>Deploy Website</DialogTitle>
                 </DialogHeader>
-                <Form {...githubForm}>
-                  <form onSubmit={githubForm.handleSubmit(onGitHubSubmit)} className="space-y-4">
+                <Form {...deployForm}>
+                  <form onSubmit={deployForm.handleSubmit(onDeploySubmit)} className="space-y-4">
                     <FormField
-                      control={githubForm.control}
-                      name="github_repo"
+                      control={deployForm.control}
+                      name="deploy_config_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Repository GitHub</FormLabel>
-                          <FormControl>
-                            <Input placeholder="username/repository-name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={githubForm.control}
-                      name="private_key"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Private Key</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="-----BEGIN PRIVATE KEY-----" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={githubForm.control}
-                      name="public_key"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Public Key</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="ssh-rsa AAAAB3NzaC1yc2E..." {...field} />
-                          </FormControl>
+                          <FormLabel>Pilih Deploy Configuration</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih konfigurasi deploy" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {deployConfigs?.map((config) => (
+                                <SelectItem key={config.id} value={config.id}>
+                                  <div className="flex items-center">
+                                    {config.type === 'github' ? (
+                                      <Github className="h-4 w-4 mr-2" />
+                                    ) : (
+                                      <Server className="h-4 w-4 mr-2" />
+                                    )}
+                                    {config.name} ({config.type === 'github' ? config.github_repo : config.server_ip})
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <div className="flex justify-end space-x-2">
-                      <Button type="button" variant="outline" onClick={() => setIsGitHubFormOpen(false)}>
+                      <Button type="button" variant="outline" onClick={() => setIsDeployFormOpen(false)}>
                         Batal
                       </Button>
-                      <Button type="submit" disabled={deployToGitHubMutation.isPending}>
-                        {deployToGitHubMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      <Button type="submit" disabled={deployMutation.isPending}>
+                        {deployMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                         Deploy
                       </Button>
                     </div>

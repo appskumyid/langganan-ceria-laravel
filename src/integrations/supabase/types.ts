@@ -189,6 +189,56 @@ export type Database = {
           },
         ]
       }
+      deploy_configs: {
+        Row: {
+          created_at: string
+          deploy_path: string | null
+          github_repo: string | null
+          id: string
+          name: string
+          server_ip: string | null
+          server_port: number | null
+          server_username: string | null
+          ssh_key_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deploy_path?: string | null
+          github_repo?: string | null
+          id?: string
+          name: string
+          server_ip?: string | null
+          server_port?: number | null
+          server_username?: string | null
+          ssh_key_id?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deploy_path?: string | null
+          github_repo?: string | null
+          id?: string
+          name?: string
+          server_ip?: string | null
+          server_port?: number | null
+          server_username?: string | null
+          ssh_key_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deploy_configs_ssh_key_id_fkey"
+            columns: ["ssh_key_id"]
+            isOneToOne: false
+            referencedRelation: "ssh_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_invitations: {
         Row: {
           bride_name: string
@@ -458,6 +508,36 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ssh_keys: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          private_key: string
+          public_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          private_key: string
+          public_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          private_key?: string
+          public_key?: string
           updated_at?: string
         }
         Relationships: []
