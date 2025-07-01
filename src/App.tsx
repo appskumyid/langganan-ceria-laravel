@@ -22,6 +22,7 @@ import AdminSubscriptionDetail from './pages/AdminSubscriptionDetail';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import AdminUserDetail from "./pages/AdminUserDetail";
 import TransactionHistory from "./pages/TransactionHistory";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,16 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Index />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             } 
