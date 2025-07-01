@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SSHKeyManager } from "@/components/ssh-keys/SSHKeyManager";
 import { DeployConfigManager } from "@/components/deploy/DeployConfigManager";
+import AdminSettings from "@/components/AdminSettings";
 
 const Settings = () => {
   return (
@@ -12,12 +13,17 @@ const Settings = () => {
         <p className="text-gray-600">Kelola pengaturan akun dan konfigurasi deploy Anda</p>
       </div>
 
-      <Tabs defaultValue="ssh-keys" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general">Umum</TabsTrigger>
           <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
           <TabsTrigger value="deploy-config">Deploy Config</TabsTrigger>
           <TabsTrigger value="profile">Profil</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="general">
+          <AdminSettings />
+        </TabsContent>
 
         <TabsContent value="ssh-keys">
           <Card>
