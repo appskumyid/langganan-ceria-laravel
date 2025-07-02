@@ -256,6 +256,30 @@ serve(async (req) => {
       
       try {
         // Create blob for each file with better error handling
+        let blobContent;
+        try {
+          // Properly encode content to base64
+          const encoder = new TextEncoder();
+          const data = encoder.encode(file.content);
+          blobContent = btoa(String.fromCharCode(...data));
+        } catch (encodeError) {
+          console.error(`Encoding error for ${file.name}:`, encodeError);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `Failed to encode file ${file.name}: ${encodeError.message}`,
+              timestamp: new Date().toISOString()
+            }),
+            {
+              headers: { 
+                "Content-Type": "application/json",
+                ...corsHeaders
+              },
+              status: 500,
+            }
+          );
+        }
+
         const blobResponse = await fetch(`${baseUrl}/git/blobs`, {
           method: 'POST',
           headers: {
@@ -265,7 +289,7 @@ serve(async (req) => {
             'User-Agent': 'Supabase-Edge-Function',
           },
           body: JSON.stringify({
-            content: btoa(unescape(encodeURIComponent(file.content))), // Base64 encode
+            content: blobContent,
             encoding: 'base64',
           }),
         });
