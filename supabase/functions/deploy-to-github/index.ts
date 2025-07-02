@@ -241,28 +241,57 @@ serve(async (req) => {
     for (const file of files) {
       console.log(`Processing: ${file.name} (${file.content.length} bytes)`);
       
-      // Create blob for each file
-      const blobResponse = await fetch(`${baseUrl}/git/blobs`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${githubToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'Supabase-Edge-Function',
-        },
-        body: JSON.stringify({
-          content: btoa(unescape(encodeURIComponent(file.content))), // Base64 encode
-          encoding: 'base64',
-        }),
-      });
+      try {
+        // Create blob for each file with better error handling
+        const blobResponse = await fetch(`${baseUrl}/git/blobs`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${githubToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'Supabase-Edge-Function',
+          },
+          body: JSON.stringify({
+            content: btoa(unescape(encodeURIComponent(file.content))), // Base64 encode
+            encoding: 'base64',
+          }),
+        });
 
-      if (!blobResponse.ok) {
-        const errorBody = await blobResponse.text();
-        console.error(`Blob creation error for ${file.name}:`, errorBody);
+        if (!blobResponse.ok) {
+          const errorBody = await blobResponse.text();
+          console.error(`Blob creation error for ${file.name}:`, errorBody);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `Failed to create blob for ${file.name}: ${blobResponse.status} ${blobResponse.statusText}`,
+              details: errorBody,
+              timestamp: new Date().toISOString()
+            }),
+            {
+              headers: { 
+                "Content-Type": "application/json",
+                ...corsHeaders
+              },
+              status: 500,
+            }
+          );
+        }
+
+        const blobData = await blobResponse.json();
+        console.log(`Created blob for ${file.name}: ${blobData.sha}`);
+        
+        tree.push({
+          path: file.name,
+          mode: '100644',
+          type: 'blob',
+          sha: blobData.sha,
+        });
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error);
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Failed to create blob for ${file.name}: ${blobResponse.status} ${blobResponse.statusText}`,
+            error: `Error processing file ${file.name}: ${error.message}`,
             timestamp: new Date().toISOString()
           }),
           {
@@ -274,16 +303,6 @@ serve(async (req) => {
           }
         );
       }
-
-      const blobData = await blobResponse.json();
-      console.log(`Created blob for ${file.name}: ${blobData.sha}`);
-      
-      tree.push({
-        path: file.name,
-        mode: '100644',
-        type: 'blob',
-        sha: blobData.sha,
-      });
     }
 
     // Create new tree
