@@ -33,66 +33,101 @@ serve(async (req) => {
   }
 
   try {
-    const { serverIp, username, port, deployPath, files, sshKey, deployConfig }: DeployRequest = await req.json();
+    console.log('=== Server Deployment Started ===');
+    
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      console.error('Failed to parse request body:', error);
+      throw new Error('Invalid JSON in request body');
+    }
 
-    console.log('Server deployment request received:', { 
+    const { serverIp, username, port, deployPath, files, sshKey, deployConfig }: DeployRequest = requestBody;
+
+    console.log('Deployment request received:', { 
       serverIp, 
       username, 
-      port, 
-      deployPath, 
-      filesCount: files.length 
+      port: port || 22, 
+      deployPath: deployPath || '/var/www/html',
+      filesCount: files?.length || 0 
     });
 
     // Validate input
     if (!serverIp || !username || !files || files.length === 0) {
+      console.error('Validation failed:', { serverIp: !!serverIp, username: !!username, filesCount: files?.length });
       throw new Error('Invalid deployment request: Missing required fields (serverIp, username, or files)');
     }
 
     // Validate SSH key
     if (!sshKey || !sshKey.private_key) {
+      console.error('SSH key validation failed');
       throw new Error('SSH private key is required for server deployment');
     }
 
-    console.log('Starting server deployment with rsync...');
-    console.log(`Target server: ${username}@${serverIp}:${port}`);
-    console.log(`Deploy path: ${deployPath}`);
+    const actualPort = port || 22;
+    const actualDeployPath = deployPath || '/var/www/html';
+
+    console.log('=== Starting Server Deployment ===');
+    console.log(`Target: ${username}@${serverIp}:${actualPort}`);
+    console.log(`Deploy path: ${actualDeployPath}`);
     console.log(`Files to deploy: ${files.map(f => f.name).join(', ')}`);
 
     // Create temporary directory for files
-    const tempDir = await Deno.makeTempDir({ prefix: 'deploy_' });
-    console.log(`Created temp directory: ${tempDir}`);
+    let tempDir;
+    try {
+      tempDir = await Deno.makeTempDir({ prefix: 'deploy_' });
+      console.log(`Created temp directory: ${tempDir}`);
+    } catch (error) {
+      console.error('Failed to create temp directory:', error);
+      throw new Error('Failed to create temporary directory');
+    }
 
     try {
       // Write SSH private key to temporary file
       const sshKeyPath = `${tempDir}/ssh_key`;
-      await Deno.writeTextFile(sshKeyPath, sshKey.private_key);
-      await Deno.chmod(sshKeyPath, 0o600); // Set proper permissions for SSH key
+      
+      try {
+        await Deno.writeTextFile(sshKeyPath, sshKey.private_key);
+        await Deno.chmod(sshKeyPath, 0o600);
+        console.log('SSH key written and permissions set');
+      } catch (error) {
+        console.error('Failed to write SSH key:', error);
+        throw new Error('Failed to prepare SSH key');
+      }
 
       console.log('Step 1: Writing files to temporary directory...');
       const uploadedFiles = [];
       
       // Write all files to temp directory
       for (const file of files) {
-        const filePath = `${tempDir}/${file.name}`;
-        await Deno.writeTextFile(filePath, file.content);
-        console.log(`Written: ${file.name} (${file.content.length} bytes)`);
-        
-        uploadedFiles.push({
-          name: file.name,
-          path: `${deployPath}/${file.name}`,
-          size: file.content.length,
-          uploaded: true
-        });
+        try {
+          const filePath = `${tempDir}/${file.name}`;
+          await Deno.writeTextFile(filePath, file.content);
+          console.log(`Written: ${file.name} (${file.content.length} bytes)`);
+          
+          uploadedFiles.push({
+            name: file.name,
+            path: `${actualDeployPath}/${file.name}`,
+            size: file.content.length,
+            uploaded: true
+          });
+        } catch (error) {
+          console.error(`Failed to write file ${file.name}:`, error);
+          throw new Error(`Failed to write file: ${file.name}`);
+        }
       }
 
       console.log('Step 2: Testing SSH connection...');
+      
       // Test SSH connection first
       const testSshCommand = new Deno.Command("ssh", {
         args: [
           "-i", sshKeyPath,
-          "-p", port.toString(),
+          "-p", actualPort.toString(),
           "-o", "StrictHostKeyChecking=no",
           "-o", "ConnectTimeout=10",
+          "-o", "BatchMode=yes",
           `${username}@${serverIp}`,
           "echo 'SSH connection successful'"
         ],
@@ -100,7 +135,13 @@ serve(async (req) => {
         stderr: "piped"
       });
 
-      const testSshResult = await testSshCommand.output();
+      let testSshResult;
+      try {
+        testSshResult = await testSshCommand.output();
+      } catch (error) {
+        console.error('SSH command execution failed:', error);
+        throw new Error('Failed to execute SSH command - SSH may not be available in this environment');
+      }
       
       if (!testSshResult.success) {
         const errorOutput = new TextDecoder().decode(testSshResult.stderr);
@@ -111,20 +152,29 @@ serve(async (req) => {
       console.log('SSH connection test successful');
 
       console.log('Step 3: Creating deployment directory on server...');
+      
       // Create deployment directory
       const mkdirCommand = new Deno.Command("ssh", {
         args: [
           "-i", sshKeyPath,
-          "-p", port.toString(),
+          "-p", actualPort.toString(),
           "-o", "StrictHostKeyChecking=no",
+          "-o", "BatchMode=yes",
           `${username}@${serverIp}`,
-          `mkdir -p ${deployPath}`
+          `mkdir -p ${actualDeployPath}`
         ],
         stdout: "piped",
         stderr: "piped"
       });
 
-      const mkdirResult = await mkdirCommand.output();
+      let mkdirResult;
+      try {
+        mkdirResult = await mkdirCommand.output();
+      } catch (error) {
+        console.error('Directory creation command failed:', error);
+        throw new Error('Failed to create directory on server');
+      }
+      
       if (!mkdirResult.success) {
         const errorOutput = new TextDecoder().decode(mkdirResult.stderr);
         console.error('Failed to create directory:', errorOutput);
@@ -132,20 +182,27 @@ serve(async (req) => {
       }
 
       console.log('Step 4: Deploying files with rsync...');
+      
       // Use rsync to deploy files
       const rsyncCommand = new Deno.Command("rsync", {
         args: [
           "-avz", // archive, verbose, compress
           "--delete", // delete files on destination that don't exist in source
-          "-e", `ssh -i ${sshKeyPath} -p ${port} -o StrictHostKeyChecking=no`,
+          "-e", `ssh -i ${sshKeyPath} -p ${actualPort} -o StrictHostKeyChecking=no -o BatchMode=yes`,
           `${tempDir}/`,
-          `${username}@${serverIp}:${deployPath}/`
+          `${username}@${serverIp}:${actualDeployPath}/`
         ],
         stdout: "piped",
         stderr: "piped"
       });
 
-      const rsyncResult = await rsyncCommand.output();
+      let rsyncResult;
+      try {
+        rsyncResult = await rsyncCommand.output();
+      } catch (error) {
+        console.error('Rsync command execution failed:', error);
+        throw new Error('Failed to execute rsync - rsync may not be available in this environment');
+      }
       
       if (!rsyncResult.success) {
         const errorOutput = new TextDecoder().decode(rsyncResult.stderr);
@@ -157,22 +214,29 @@ serve(async (req) => {
       console.log('Rsync output:', rsyncOutput);
 
       console.log('Step 5: Setting file permissions...');
+      
       // Set proper file permissions
       const chmodCommand = new Deno.Command("ssh", {
         args: [
           "-i", sshKeyPath,
-          "-p", port.toString(),
+          "-p", actualPort.toString(),
           "-o", "StrictHostKeyChecking=no",
+          "-o", "BatchMode=yes",
           `${username}@${serverIp}`,
-          `find ${deployPath} -type f -name "*.html" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.js" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.css" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.json" -exec chmod 644 {} \\;`
+          `find ${actualDeployPath} -type f -name "*.html" -exec chmod 644 {} \\; && find ${actualDeployPath} -type f -name "*.js" -exec chmod 644 {} \\; && find ${actualDeployPath} -type f -name "*.css" -exec chmod 644 {} \\; && find ${actualDeployPath} -type f -name "*.json" -exec chmod 644 {} \\;`
         ],
         stdout: "piped",
         stderr: "piped"
       });
 
-      await chmodCommand.output(); // Don't fail if chmod fails
+      try {
+        await chmodCommand.output(); // Don't fail if chmod fails
+        console.log('File permissions set');
+      } catch (error) {
+        console.warn('File permission setting failed (non-critical):', error);
+      }
 
-      console.log('Server deployment completed successfully');
+      console.log('=== Server deployment completed successfully ===');
 
       const serverUrl = `http://${serverIp}`;
       
@@ -181,12 +245,12 @@ serve(async (req) => {
           success: true,
           message: `Successfully deployed ${files.length} files to server ${serverIp}`,
           url: serverUrl,
-          deployPath: deployPath,
+          deployPath: actualDeployPath,
           uploadedFiles: uploadedFiles,
           deployedFiles: files.map(f => f.name),
           timestamp: new Date().toISOString(),
           deploymentMethod: "rsync",
-          note: `Files have been deployed to ${serverUrl} at path ${deployPath} using rsync over SSH`
+          note: `Files have been deployed to ${serverUrl} at path ${actualDeployPath} using rsync over SSH`
         }),
         {
           headers: { 
@@ -199,16 +263,20 @@ serve(async (req) => {
 
     } finally {
       // Clean up temporary directory
-      try {
-        await Deno.remove(tempDir, { recursive: true });
-        console.log('Cleaned up temporary directory');
-      } catch (error) {
-        console.error('Failed to clean up temp directory:', error);
+      if (tempDir) {
+        try {
+          await Deno.remove(tempDir, { recursive: true });
+          console.log('Cleaned up temporary directory');
+        } catch (error) {
+          console.error('Failed to clean up temp directory:', error);
+        }
       }
     }
 
   } catch (error) {
-    console.error('Server deployment error:', error);
+    console.error('=== Server deployment error ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     return new Response(
       JSON.stringify({
@@ -218,18 +286,21 @@ serve(async (req) => {
         troubleshooting: {
           common_issues: [
             "SSH key format or permissions issue",
-            "Server IP, port, or username incorrect",
+            "Server IP, port, or username incorrect", 
             "Network connectivity issues",
             "Server firewall blocking SSH connections",
             "Deploy path permissions issue",
-            "rsync not installed on server"
+            "rsync or ssh commands not available in Deno environment",
+            "SSH key authentication setup incorrect"
           ],
           requirements: [
             "SSH access to the target server",
             "rsync installed on both source and target",
             "Proper SSH key authentication setup",
-            "Correct server firewall configuration"
-          ]
+            "Correct server firewall configuration",
+            "SSH and rsync commands available in Deno runtime"
+          ],
+          note: "If SSH/rsync are not available in this Deno environment, consider using alternative deployment methods like FTP, SFTP, or HTTP-based deployment APIs."
         }
       }),
       {
