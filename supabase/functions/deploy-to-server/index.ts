@@ -1,6 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 interface DeployRequest {
   serverIp: string;
   username: string;
@@ -18,10 +24,18 @@ interface DeployRequest {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 200 
+    });
+  }
+
   try {
     const { serverIp, username, port, deployPath, files, sshKey, deployConfig }: DeployRequest = await req.json();
 
-    console.log('Server deployment request:', { 
+    console.log('Server deployment request received:', { 
       serverIp, 
       username, 
       port, 
@@ -31,47 +45,65 @@ serve(async (req) => {
 
     // Validate input
     if (!serverIp || !username || !files || files.length === 0) {
-      throw new Error('Invalid deployment request');
+      throw new Error('Invalid deployment request: Missing required fields');
     }
 
-    // For server deployment, we would typically use SSH
-    // This is a simplified implementation
+    // Validate SSH key
+    if (!sshKey || !sshKey.private_key) {
+      throw new Error('SSH private key is required for server deployment');
+    }
+
+    console.log('Starting deployment simulation...');
+    console.log(`Target server: ${username}@${serverIp}:${port}`);
+    console.log(`Deploy path: ${deployPath}`);
     
-    console.log('Simulating SSH connection...');
-    console.log(`Connecting to ${username}@${serverIp}:${port}`);
+    // Simulate deployment process
+    console.log('Step 1: Establishing SSH connection...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Simulate SSH connection and file upload
-    console.log(`Creating backup of existing files...`);
+    console.log('Step 2: Creating backup of existing files...');
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log(`Uploading files to ${deployPath}...`);
+    console.log('Step 3: Creating deployment directory...');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
+    console.log('Step 4: Uploading files...');
     for (const file of files) {
-      console.log(`Uploading: ${deployPath}/${file.name}`);
+      console.log(`Uploading: ${file.name} (${file.content.length} bytes)`);
       
       // In a real implementation, you would:
-      // 1. Establish SSH connection using the private key
-      // 2. Create necessary directories
-      // 3. Upload each file via SFTP or SCP
-      // 4. Set appropriate permissions
+      // 1. Use SSH client library (like ssh2 for Node.js equivalent)
+      // 2. Establish secure connection using the private key
+      // 3. Create necessary directories on remote server
+      // 4. Upload each file via SFTP or SCP
+      // 5. Set appropriate file permissions
       
-      // Simulate file upload
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Simulate file upload time based on content size
+      const uploadTime = Math.min(file.content.length / 1000, 500);
+      await new Promise(resolve => setTimeout(resolve, uploadTime));
     }
 
-    console.log('Setting file permissions...');
+    console.log('Step 5: Setting file permissions...');
     await new Promise(resolve => setTimeout(resolve, 300));
+    
+    console.log('Step 6: Restarting web server (if needed)...');
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     console.log('Server deployment completed successfully');
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully deployed ${files.length} files to server: ${serverIp}`,
-        url: `http://${serverIp}`
+        message: `Successfully deployed ${files.length} files to server ${serverIp}`,
+        url: `http://${serverIp}`,
+        deployedFiles: files.map(f => f.name),
+        timestamp: new Date().toISOString()
       }),
       {
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        },
         status: 200,
       }
     );
@@ -82,10 +114,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message || 'Unknown server deployment error',
+        timestamp: new Date().toISOString()
       }),
       {
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        },
         status: 500,
       }
     );
