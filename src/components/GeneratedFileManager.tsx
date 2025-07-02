@@ -11,15 +11,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw, Server, Rocket } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw, Server, Rocket, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SSHKeyManager } from '@/components/ssh-keys/SSHKeyManager';
 import { DeployConfigManager } from '@/components/deploy/DeployConfigManager';
+import { DeploymentHistory } from '@/components/deploy/DeploymentHistory';
 import { DeployService } from '@/services/deployService';
 
 type Product = Tables<'managed_products'>;
@@ -322,46 +324,14 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
         </div>
       </div>
 
-      {/* Template File Product Section */}
+      {/* Template File Product Section with Tabs */}
       <div className="bg-white p-4 rounded-lg border">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-medium">Template File Produk (Asli)</h3>
+            <h3 className="text-lg font-medium">Manajemen Website & Deploy</h3>
             <p className="text-sm text-gray-500">File untuk: {product.name}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Pengaturan Deploy
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle>Pengaturan Deploy</DialogTitle>
-                </DialogHeader>
-                <div className="flex border-b">
-                  <button
-                    className={`px-4 py-2 font-medium ${activeTab === 'ssh-keys' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('ssh-keys')}
-                  >
-                    SSH Keys
-                  </button>
-                  <button
-                    className={`px-4 py-2 font-medium ${activeTab === 'deploy-configs' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('deploy-configs')}
-                  >
-                    Deploy Configurations
-                  </button>
-                </div>
-                <div className="mt-4">
-                  {activeTab === 'ssh-keys' && <SSHKeyManager />}
-                  {activeTab === 'deploy-configs' && <DeployConfigManager />}
-                </div>
-              </DialogContent>
-            </Dialog>
-
             <Dialog open={isDeployFormOpen} onOpenChange={setIsDeployFormOpen}>
               <DialogTrigger asChild>
                 <Button disabled={!files || files.length === 0}>
@@ -483,55 +453,74 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
           </div>
         </div>
 
-        <div className="mb-4">
-          <h4 className="font-medium mb-2">Daftar File</h4>
-        </div>
-
-        {isLoadingFiles ? (
-          <div className="flex justify-center items-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : files && files.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama File</TableHead>
-                <TableHead>Diperbarui</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {files.map((file) => (
-                <TableRow key={file.id}>
-                  <TableCell className="font-medium">{file.file_name}</TableCell>
-                  <TableCell>{new Date(file.updated_at).toLocaleDateString('id-ID')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex space-x-2 justify-end">
-                      <Button variant="outline" size="sm" onClick={() => handlePreviewFile(file)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(file)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => handleDelete(file.id)}
-                        disabled={deleteFileMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p>Belum ada file yang di-generate untuk produk ini.</p>
-          </div>
-        )}
+        <Tabs defaultValue="files" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="files">Daftar File</TabsTrigger>
+            <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
+            <TabsTrigger value="deploy-configs">Deploy Config</TabsTrigger>
+            <TabsTrigger value="history">Riwayat Deploy</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="files" className="mt-4">
+            {isLoadingFiles ? (
+              <div className="flex justify-center items-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : files && files.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama File</TableHead>
+                    <TableHead>Diperbarui</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {files.map((file) => (
+                    <TableRow key={file.id}>
+                      <TableCell className="font-medium">{file.file_name}</TableCell>
+                      <TableCell>{new Date(file.updated_at).toLocaleDateString('id-ID')}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex space-x-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => handlePreviewFile(file)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(file)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => handleDelete(file.id)}
+                            disabled={deleteFileMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Belum ada file yang di-generate untuk produk ini.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="ssh-keys" className="mt-4">
+            <SSHKeyManager />
+          </TabsContent>
+          
+          <TabsContent value="deploy-configs" className="mt-4">
+            <DeployConfigManager />
+          </TabsContent>
+          
+          <TabsContent value="history" className="mt-4">
+            <DeploymentHistory />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

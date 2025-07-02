@@ -14,6 +14,9 @@ export interface DeployResult {
   deployedFiles?: string[];
   error?: string;
   timestamp?: string;
+  commitSha?: string;
+  deployPath?: string;
+  uploadedFiles?: any[];
 }
 
 export class DeployService {
@@ -37,6 +40,8 @@ export class DeployService {
         name: file.file_name,
         content: file.html_content || ''
       }));
+
+      console.log('Files to deploy:', deployFiles.map(f => ({ name: f.name, size: f.content.length })));
 
       // Call Supabase Edge Function for GitHub deployment
       const { data, error } = await supabase.functions.invoke('deploy-to-github', {
@@ -64,7 +69,8 @@ export class DeployService {
         url: data.url,
         pagesUrl: data.pagesUrl,
         deployedFiles: data.deployedFiles,
-        timestamp: data.timestamp
+        timestamp: data.timestamp,
+        commitSha: data.commitSha
       };
     } catch (error: any) {
       console.error('GitHub deployment failed:', error);
@@ -98,6 +104,8 @@ export class DeployService {
         content: file.html_content || ''
       }));
 
+      console.log('Files to deploy:', deployFiles.map(f => ({ name: f.name, size: f.content.length })));
+
       // Call Supabase Edge Function for server deployment
       const { data, error } = await supabase.functions.invoke('deploy-to-server', {
         body: {
@@ -125,6 +133,8 @@ export class DeployService {
         success: true,
         message: data.message || `Successfully deployed to server: ${config.server_ip}`,
         url: data.url,
+        deployPath: data.deployPath,
+        uploadedFiles: data.uploadedFiles,
         deployedFiles: data.deployedFiles,
         timestamp: data.timestamp
       };
