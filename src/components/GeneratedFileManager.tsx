@@ -20,6 +20,7 @@ import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw
 import { useToast } from '@/hooks/use-toast';
 import { SSHKeyManager } from '@/components/ssh-keys/SSHKeyManager';
 import { DeployConfigManager } from '@/components/deploy/DeployConfigManager';
+import { DeployService } from '@/services/deployService';
 
 type Product = Tables<'managed_products'>;
 type UserGeneratedFile = Tables<'user_generated_files'>;
@@ -213,26 +214,31 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
         throw new Error('Deploy configuration tidak ditemukan');
       }
 
-      // Simulate deploy process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      if (!files || files.length === 0) {
+        throw new Error('Tidak ada file untuk di-deploy');
+      }
+
+      console.log('Starting deployment with config:', deployConfig);
       
-      return { 
-        success: true, 
-        config: deployConfig,
-        url: deployConfig.type === 'github' 
-          ? `https://github.com/${deployConfig.github_repo}` 
-          : `http://${deployConfig.server_ip}`
-      };
+      // Use the actual deploy service
+      const result = await DeployService.deploy(deployConfig, files);
+      
+      if (!result.success) {
+        throw new Error(result.error || result.message);
+      }
+      
+      return result;
     },
     onSuccess: (result) => {
       toast({ 
         title: 'Deploy Berhasil!', 
-        description: `Website berhasil di-deploy ke ${result.config.name}` 
+        description: result.message
       });
       setIsDeployFormOpen(false);
       deployForm.reset();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Deploy error:', error);
       toast({ 
         title: 'Deploy Gagal', 
         description: error.message, 
