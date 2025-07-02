@@ -24,6 +24,10 @@ interface DeployRequest {
 }
 
 serve(async (req) => {
+  console.log('=== Server Deploy Function Started ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
@@ -33,14 +37,35 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== Server Deployment Started ===');
+    console.log('=== Parsing Request Body ===');
     
     let requestBody;
     try {
-      requestBody = await req.json();
-    } catch (error) {
-      console.error('Failed to parse request body:', error);
-      throw new Error('Invalid JSON in request body');
+      const bodyText = await req.text();
+      console.log('Raw body length:', bodyText.length);
+      
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty');
+      }
+      
+      requestBody = JSON.parse(bodyText);
+      console.log('Parsed request body keys:', Object.keys(requestBody));
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Invalid JSON in request body: ${parseError.message}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
     }
 
     const { serverIp, username, port, deployPath, files, sshKey, deployConfig }: DeployRequest = requestBody;
@@ -50,19 +75,51 @@ serve(async (req) => {
       username, 
       port: port || 22, 
       deployPath: deployPath || '/var/www/html',
-      filesCount: files?.length || 0 
+      filesCount: files?.length || 0,
+      hasSSHKey: !!sshKey
     });
 
     // Validate input
     if (!serverIp || !username || !files || files.length === 0) {
-      console.error('Validation failed:', { serverIp: !!serverIp, username: !!username, filesCount: files?.length });
-      throw new Error('Invalid deployment request: Missing required fields (serverIp, username, or files)');
+      console.error('Validation failed:', { 
+        hasServerIp: !!serverIp, 
+        hasUsername: !!username, 
+        hasFiles: !!files,
+        filesCount: files?.length || 0 
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid deployment request: Missing required fields (serverIp, username, or files)',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
     }
 
     // Validate SSH key
     if (!sshKey || !sshKey.private_key) {
       console.error('SSH key validation failed');
-      throw new Error('SSH private key is required for server deployment');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'SSH private key is required for server deployment',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
     }
 
     const actualPort = port || 22;
@@ -80,7 +137,20 @@ serve(async (req) => {
       console.log(`Created temp directory: ${tempDir}`);
     } catch (error) {
       console.error('Failed to create temp directory:', error);
-      throw new Error('Failed to create temporary directory');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to create temporary directory for deployment',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     try {
@@ -93,7 +163,20 @@ serve(async (req) => {
         console.log('SSH key written and permissions set');
       } catch (error) {
         console.error('Failed to write SSH key:', error);
-        throw new Error('Failed to prepare SSH key');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Failed to prepare SSH key for deployment',
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
 
       console.log('Step 1: Writing files to temporary directory...');
@@ -114,7 +197,20 @@ serve(async (req) => {
           });
         } catch (error) {
           console.error(`Failed to write file ${file.name}:`, error);
-          throw new Error(`Failed to write file: ${file.name}`);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `Failed to write file: ${file.name}`,
+              timestamp: new Date().toISOString()
+            }),
+            {
+              headers: { 
+                "Content-Type": "application/json",
+                ...corsHeaders
+              },
+              status: 500,
+            }
+          );
         }
       }
 
@@ -140,13 +236,49 @@ serve(async (req) => {
         testSshResult = await testSshCommand.output();
       } catch (error) {
         console.error('SSH command execution failed:', error);
-        throw new Error('Failed to execute SSH command - SSH may not be available in this environment');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'SSH command not available in this deployment environment. Please use alternative deployment methods.',
+            timestamp: new Date().toISOString(),
+            note: 'This deployment environment may not support direct SSH/rsync operations.'
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
       
       if (!testSshResult.success) {
         const errorOutput = new TextDecoder().decode(testSshResult.stderr);
         console.error('SSH connection test failed:', errorOutput);
-        throw new Error(`SSH connection failed: ${errorOutput}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `SSH connection failed: ${errorOutput}`,
+            timestamp: new Date().toISOString(),
+            troubleshooting: {
+              steps: [
+                "1. Verify server IP address and port",
+                "2. Check SSH key format and permissions",
+                "3. Ensure server allows SSH connections",
+                "4. Verify username has proper access",
+                "5. Check firewall settings"
+              ]
+            }
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
 
       console.log('SSH connection test successful');
@@ -172,13 +304,39 @@ serve(async (req) => {
         mkdirResult = await mkdirCommand.output();
       } catch (error) {
         console.error('Directory creation command failed:', error);
-        throw new Error('Failed to create directory on server');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Failed to create directory on server',
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
       
       if (!mkdirResult.success) {
         const errorOutput = new TextDecoder().decode(mkdirResult.stderr);
         console.error('Failed to create directory:', errorOutput);
-        throw new Error(`Failed to create directory: ${errorOutput}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to create directory: ${errorOutput}`,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
 
       console.log('Step 4: Deploying files with rsync...');
@@ -201,13 +359,40 @@ serve(async (req) => {
         rsyncResult = await rsyncCommand.output();
       } catch (error) {
         console.error('Rsync command execution failed:', error);
-        throw new Error('Failed to execute rsync - rsync may not be available in this environment');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Rsync command not available in this deployment environment. Please use alternative deployment methods.',
+            timestamp: new Date().toISOString(),
+            note: 'This deployment environment may not support rsync operations.'
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
       
       if (!rsyncResult.success) {
         const errorOutput = new TextDecoder().decode(rsyncResult.stderr);
         console.error('Rsync deployment failed:', errorOutput);
-        throw new Error(`Rsync deployment failed: ${errorOutput}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Rsync deployment failed: ${errorOutput}`,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
 
       const rsyncOutput = new TextDecoder().decode(rsyncResult.stdout);
@@ -275,6 +460,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('=== Server deployment error ===');
+    console.error('Error name:', error.name);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     

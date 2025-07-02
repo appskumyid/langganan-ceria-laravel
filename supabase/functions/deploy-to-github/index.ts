@@ -21,6 +21,10 @@ interface DeployRequest {
 }
 
 serve(async (req) => {
+  console.log('=== GitHub Deploy Function Started ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
@@ -30,36 +34,126 @@ serve(async (req) => {
   }
 
   try {
-    const { repository, files, sshKey, deployConfig }: DeployRequest = await req.json();
+    console.log('=== Parsing Request Body ===');
+    
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      console.log('Raw body length:', bodyText.length);
+      
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty');
+      }
+      
+      requestBody = JSON.parse(bodyText);
+      console.log('Parsed request body keys:', Object.keys(requestBody));
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Invalid JSON in request body: ${parseError.message}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
+    }
+
+    const { repository, files, sshKey, deployConfig }: DeployRequest = requestBody;
 
     console.log('GitHub deployment request received:', { 
       repository, 
-      filesCount: files.length 
+      filesCount: files?.length || 0,
+      hasSSHKey: !!sshKey,
+      hasDeployConfig: !!deployConfig
     });
 
     // Validate input
     if (!repository || !files || files.length === 0) {
-      throw new Error('Invalid deployment request: Missing repository or files');
+      console.error('Validation failed:', { 
+        hasRepository: !!repository, 
+        hasFiles: !!files, 
+        filesCount: files?.length || 0 
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid deployment request: Missing repository or files',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
     }
 
-    // Validate repository format (should be username/repo-name)
-    if (!repository.includes('/') || repository.split('/').length !== 2) {
-      throw new Error('Repository should be in format: username/repository-name');
+    // Parse repository format
+    let owner, repo;
+    try {
+      // Handle both formats: username/repo or git@github.com:username/repo.git
+      if (repository.startsWith('git@github.com:')) {
+        const gitRepo = repository.replace('git@github.com:', '').replace('.git', '');
+        [owner, repo] = gitRepo.split('/');
+      } else {
+        [owner, repo] = repository.split('/');
+      }
+
+      if (!owner || !repo) {
+        throw new Error('Invalid repository format');
+      }
+    } catch (error) {
+      console.error('Repository parsing error:', error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Repository should be in format: username/repository-name or git@github.com:username/repository-name.git',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 400,
+        }
+      );
     }
 
     // Get GitHub token from environment
     const githubToken = Deno.env.get('GITHUB_TOKEN');
     if (!githubToken) {
       console.error('GitHub token not found in environment variables');
-      throw new Error('GitHub token not configured. Please add GITHUB_TOKEN to your Supabase project secrets in the Dashboard > Project Settings > Edge Functions.');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'GitHub token not configured. Please add GITHUB_TOKEN to your Supabase project secrets.',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
-    const [owner, repo] = repository.split('/');
     const baseUrl = `https://api.github.com/repos/${owner}/${repo}`;
-
     console.log('Starting GitHub deployment...');
-    console.log(`Target repository: ${repository}`);
+    console.log(`Target repository: ${owner}/${repo}`);
     console.log(`Base URL: ${baseUrl}`);
+    console.log(`Files to deploy: ${files.map(f => f.name).join(', ')}`);
     
     // Check if repository exists and is accessible
     console.log('Step 1: Checking repository access...');
@@ -77,12 +171,29 @@ serve(async (req) => {
       const errorBody = await repoResponse.text();
       console.error('Repository access error:', errorBody);
       
+      let errorMessage;
       if (repoResponse.status === 404) {
-        throw new Error(`Repository ${repository} not found or access denied. Please ensure the repository exists and your GitHub token has the necessary permissions.`);
+        errorMessage = `Repository ${owner}/${repo} not found or access denied. Please ensure the repository exists and your GitHub token has the necessary permissions.`;
       } else if (repoResponse.status === 401) {
-        throw new Error('GitHub authentication failed. Please check your GITHUB_TOKEN.');
+        errorMessage = 'GitHub authentication failed. Please check your GITHUB_TOKEN.';
+      } else {
+        errorMessage = `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`;
       }
-      throw new Error(`Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     console.log('Step 2: Getting repository default branch...');
@@ -103,7 +214,20 @@ serve(async (req) => {
     if (!branchResponse.ok) {
       const errorBody = await branchResponse.text();
       console.error('Branch access error:', errorBody);
-      throw new Error(`Failed to get branch info: ${branchResponse.status} ${branchResponse.statusText}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to get branch info: ${branchResponse.status} ${branchResponse.statusText}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     const branchData = await branchResponse.json();
@@ -135,7 +259,20 @@ serve(async (req) => {
       if (!blobResponse.ok) {
         const errorBody = await blobResponse.text();
         console.error(`Blob creation error for ${file.name}:`, errorBody);
-        throw new Error(`Failed to create blob for ${file.name}: ${blobResponse.status} ${blobResponse.statusText}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to create blob for ${file.name}: ${blobResponse.status} ${blobResponse.statusText}`,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 500,
+          }
+        );
       }
 
       const blobData = await blobResponse.json();
@@ -168,7 +305,20 @@ serve(async (req) => {
     if (!treeResponse.ok) {
       const errorBody = await treeResponse.text();
       console.error('Tree creation error:', errorBody);
-      throw new Error(`Failed to create tree: ${treeResponse.status} ${treeResponse.statusText}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to create tree: ${treeResponse.status} ${treeResponse.statusText}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     const treeData = await treeResponse.json();
@@ -194,7 +344,20 @@ serve(async (req) => {
     if (!commitResponse.ok) {
       const errorBody = await commitResponse.text();
       console.error('Commit creation error:', errorBody);
-      throw new Error(`Failed to create commit: ${commitResponse.status} ${commitResponse.statusText}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to create commit: ${commitResponse.status} ${commitResponse.statusText}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     const commitData = await commitResponse.json();
@@ -218,18 +381,31 @@ serve(async (req) => {
     if (!refResponse.ok) {
       const errorBody = await refResponse.text();
       console.error('Reference update error:', errorBody);
-      throw new Error(`Failed to update branch: ${refResponse.status} ${refResponse.statusText}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to update branch: ${refResponse.status} ${refResponse.statusText}`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 500,
+        }
+      );
     }
 
     console.log('GitHub deployment completed successfully');
 
-    const githubUrl = `https://github.com/${repository}`;
+    const githubUrl = `https://github.com/${owner}/${repo}`;
     const pagesUrl = `https://${owner}.github.io/${repo}`;
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully deployed ${files.length} files to GitHub repository: ${repository}`,
+        message: `Successfully deployed ${files.length} files to GitHub repository: ${owner}/${repo}`,
         url: githubUrl,
         pagesUrl: pagesUrl,
         deployedFiles: files.map(f => f.name),
@@ -247,7 +423,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('GitHub deployment error:', error);
+    console.error('=== GitHub deployment error ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     return new Response(
       JSON.stringify({
