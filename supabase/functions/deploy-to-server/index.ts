@@ -53,95 +53,159 @@ serve(async (req) => {
       throw new Error('SSH private key is required for server deployment');
     }
 
-    console.log('Starting server deployment...');
+    console.log('Starting server deployment with rsync...');
     console.log(`Target server: ${username}@${serverIp}:${port}`);
     console.log(`Deploy path: ${deployPath}`);
     console.log(`Files to deploy: ${files.map(f => f.name).join(', ')}`);
 
-    // IMPORTANT: This is currently a simulation
-    // For real SSH deployment, you would need to use an SSH library like ssh2-sftp-client
-    // Deno doesn't have native SSH support, so this would require additional setup
-    
-    console.log('NOTICE: Server deployment is currently simulated');
-    console.log('To implement real SSH deployment, you would need:');
-    console.log('1. An SSH library compatible with Deno');
-    console.log('2. Network access from Supabase Edge Functions to your server');
-    console.log('3. Proper SSH key authentication setup');
-    
-    console.log('Step 1: Simulating SSH connection validation...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Step 2: Simulating deployment directory creation...');
-    console.log(`Would execute: mkdir -p ${deployPath}`);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    console.log('Step 3: Simulating file uploads...');
-    const uploadedFiles = [];
-    
-    for (const file of files) {
-      console.log(`Simulating upload: ${file.name} (${file.content.length} bytes)`);
-      console.log(`Would write to: ${deployPath}/${file.name}`);
-      
-      // In real implementation, this would use SFTP or SCP:
-      // await sftpClient.put(Buffer.from(file.content), `${deployPath}/${file.name}`);
-      
-      uploadedFiles.push({
-        name: file.name,
-        path: `${deployPath}/${file.name}`,
-        size: file.content.length,
-        uploaded: true
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
+    // Create temporary directory for files
+    const tempDir = await Deno.makeTempDir({ prefix: 'deploy_' });
+    console.log(`Created temp directory: ${tempDir}`);
 
-    console.log('Step 4: Simulating file permissions setup...');
-    console.log(`Would execute: chmod 644 ${deployPath}/*`);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    console.log('Step 5: Simulating web server reload...');
-    console.log('Would execute: systemctl reload nginx (or apache2)');
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    console.log('Server deployment simulation completed');
+    try {
+      // Write SSH private key to temporary file
+      const sshKeyPath = `${tempDir}/ssh_key`;
+      await Deno.writeTextFile(sshKeyPath, sshKey.private_key);
+      await Deno.chmod(sshKeyPath, 0o600); // Set proper permissions for SSH key
 
-    const serverUrl = `http://${serverIp}`;
-    
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Server deployment simulated successfully for ${files.length} files`,
-        url: serverUrl,
-        deployPath: deployPath,
-        uploadedFiles: uploadedFiles,
-        deployedFiles: files.map(f => f.name),
-        timestamp: new Date().toISOString(),
-        warning: "This is currently a simulation. Real SSH deployment requires additional setup.",
-        implementation_notes: {
-          current_status: "Simulation only",
-          required_for_real_deployment: [
-            "SSH library compatible with Deno (e.g., ssh2-sftp-client port)",
-            "Network connectivity from Supabase Edge Functions to target server",
-            "Proper SSH key authentication setup",
-            "Server firewall configuration to allow connections"
-          ],
-          alternative_solutions: [
-            "Use rsync with SSH keys",
-            "Implement FTP/SFTP deployment",
-            "Use a deployment service like Netlify or Vercel",
-            "Set up a webhook on your server to pull files"
-          ]
-        },
-        note: `Files would be deployed to ${serverUrl} at path ${deployPath}`
-      }),
-      {
-        headers: { 
-          "Content-Type": "application/json",
-          ...corsHeaders
-        },
-        status: 200,
+      console.log('Step 1: Writing files to temporary directory...');
+      const uploadedFiles = [];
+      
+      // Write all files to temp directory
+      for (const file of files) {
+        const filePath = `${tempDir}/${file.name}`;
+        await Deno.writeTextFile(filePath, file.content);
+        console.log(`Written: ${file.name} (${file.content.length} bytes)`);
+        
+        uploadedFiles.push({
+          name: file.name,
+          path: `${deployPath}/${file.name}`,
+          size: file.content.length,
+          uploaded: true
+        });
       }
-    );
+
+      console.log('Step 2: Testing SSH connection...');
+      // Test SSH connection first
+      const testSshCommand = new Deno.Command("ssh", {
+        args: [
+          "-i", sshKeyPath,
+          "-p", port.toString(),
+          "-o", "StrictHostKeyChecking=no",
+          "-o", "ConnectTimeout=10",
+          `${username}@${serverIp}`,
+          "echo 'SSH connection successful'"
+        ],
+        stdout: "piped",
+        stderr: "piped"
+      });
+
+      const testSshResult = await testSshCommand.output();
+      
+      if (!testSshResult.success) {
+        const errorOutput = new TextDecoder().decode(testSshResult.stderr);
+        console.error('SSH connection test failed:', errorOutput);
+        throw new Error(`SSH connection failed: ${errorOutput}`);
+      }
+
+      console.log('SSH connection test successful');
+
+      console.log('Step 3: Creating deployment directory on server...');
+      // Create deployment directory
+      const mkdirCommand = new Deno.Command("ssh", {
+        args: [
+          "-i", sshKeyPath,
+          "-p", port.toString(),
+          "-o", "StrictHostKeyChecking=no",
+          `${username}@${serverIp}`,
+          `mkdir -p ${deployPath}`
+        ],
+        stdout: "piped",
+        stderr: "piped"
+      });
+
+      const mkdirResult = await mkdirCommand.output();
+      if (!mkdirResult.success) {
+        const errorOutput = new TextDecoder().decode(mkdirResult.stderr);
+        console.error('Failed to create directory:', errorOutput);
+        throw new Error(`Failed to create directory: ${errorOutput}`);
+      }
+
+      console.log('Step 4: Deploying files with rsync...');
+      // Use rsync to deploy files
+      const rsyncCommand = new Deno.Command("rsync", {
+        args: [
+          "-avz", // archive, verbose, compress
+          "--delete", // delete files on destination that don't exist in source
+          "-e", `ssh -i ${sshKeyPath} -p ${port} -o StrictHostKeyChecking=no`,
+          `${tempDir}/`,
+          `${username}@${serverIp}:${deployPath}/`
+        ],
+        stdout: "piped",
+        stderr: "piped"
+      });
+
+      const rsyncResult = await rsyncCommand.output();
+      
+      if (!rsyncResult.success) {
+        const errorOutput = new TextDecoder().decode(rsyncResult.stderr);
+        console.error('Rsync deployment failed:', errorOutput);
+        throw new Error(`Rsync deployment failed: ${errorOutput}`);
+      }
+
+      const rsyncOutput = new TextDecoder().decode(rsyncResult.stdout);
+      console.log('Rsync output:', rsyncOutput);
+
+      console.log('Step 5: Setting file permissions...');
+      // Set proper file permissions
+      const chmodCommand = new Deno.Command("ssh", {
+        args: [
+          "-i", sshKeyPath,
+          "-p", port.toString(),
+          "-o", "StrictHostKeyChecking=no",
+          `${username}@${serverIp}`,
+          `find ${deployPath} -type f -name "*.html" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.js" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.css" -exec chmod 644 {} \\; && find ${deployPath} -type f -name "*.json" -exec chmod 644 {} \\;`
+        ],
+        stdout: "piped",
+        stderr: "piped"
+      });
+
+      await chmodCommand.output(); // Don't fail if chmod fails
+
+      console.log('Server deployment completed successfully');
+
+      const serverUrl = `http://${serverIp}`;
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Successfully deployed ${files.length} files to server ${serverIp}`,
+          url: serverUrl,
+          deployPath: deployPath,
+          uploadedFiles: uploadedFiles,
+          deployedFiles: files.map(f => f.name),
+          timestamp: new Date().toISOString(),
+          deploymentMethod: "rsync",
+          note: `Files have been deployed to ${serverUrl} at path ${deployPath} using rsync over SSH`
+        }),
+        {
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+          status: 200,
+        }
+      );
+
+    } finally {
+      // Clean up temporary directory
+      try {
+        await Deno.remove(tempDir, { recursive: true });
+        console.log('Cleaned up temporary directory');
+      } catch (error) {
+        console.error('Failed to clean up temp directory:', error);
+      }
+    }
 
   } catch (error) {
     console.error('Server deployment error:', error);
@@ -153,12 +217,19 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         troubleshooting: {
           common_issues: [
-            "Missing server IP, username, or SSH key",
-            "Invalid SSH key format",
+            "SSH key format or permissions issue",
+            "Server IP, port, or username incorrect",
             "Network connectivity issues",
-            "Server firewall blocking connections"
+            "Server firewall blocking SSH connections",
+            "Deploy path permissions issue",
+            "rsync not installed on server"
           ],
-          current_limitation: "Server deployment is currently simulated and requires real SSH implementation"
+          requirements: [
+            "SSH access to the target server",
+            "rsync installed on both source and target",
+            "Proper SSH key authentication setup",
+            "Correct server firewall configuration"
+          ]
         }
       }),
       {
