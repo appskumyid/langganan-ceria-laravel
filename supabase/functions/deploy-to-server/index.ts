@@ -25,7 +25,6 @@ interface DeployRequest {
 serve(async (req) => {
   console.log('=== Server Deploy Function Started ===');
   console.log('Method:', req.method);
-  console.log('Headers:', Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -44,7 +43,21 @@ serve(async (req) => {
       console.log('Raw body length:', bodyText.length);
       
       if (!bodyText || bodyText.trim() === '') {
-        throw new Error('Request body is empty');
+        console.error('Request body is empty');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Request body is empty',
+            timestamp: new Date().toISOString()
+          }),
+          {
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+            status: 400,
+          }
+        );
       }
       
       requestBody = JSON.parse(bodyText);
