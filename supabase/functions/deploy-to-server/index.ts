@@ -45,7 +45,7 @@ serve(async (req) => {
 
     // Validate input
     if (!serverIp || !username || !files || files.length === 0) {
-      throw new Error('Invalid deployment request: Missing required fields');
+      throw new Error('Invalid deployment request: Missing required fields (serverIp, username, or files)');
     }
 
     // Validate SSH key
@@ -56,33 +56,34 @@ serve(async (req) => {
     console.log('Starting server deployment...');
     console.log(`Target server: ${username}@${serverIp}:${port}`);
     console.log(`Deploy path: ${deployPath}`);
+    console.log(`Files to deploy: ${files.map(f => f.name).join(', ')}`);
 
-    // For now, we'll use a different approach - SFTP via API or direct file transfer
-    // This is a simplified implementation that would work with proper SSH libraries
+    // IMPORTANT: This is currently a simulation
+    // For real SSH deployment, you would need to use an SSH library like ssh2-sftp-client
+    // Deno doesn't have native SSH support, so this would require additional setup
     
-    console.log('Step 1: Validating SSH connection...');
-    // In a real implementation, you would:
-    // 1. Use an SSH library like ssh2 or similar for Deno
-    // 2. Connect to the server using the provided SSH key
-    // 3. Create the deployment directory if it doesn't exist
-    // 4. Upload each file via SFTP
+    console.log('NOTICE: Server deployment is currently simulated');
+    console.log('To implement real SSH deployment, you would need:');
+    console.log('1. An SSH library compatible with Deno');
+    console.log('2. Network access from Supabase Edge Functions to your server');
+    console.log('3. Proper SSH key authentication setup');
     
-    // For demonstration, we'll simulate the process but provide a real structure
+    console.log('Step 1: Simulating SSH connection validation...');
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    console.log('Step 2: Creating deployment directory...');
-    // mkdir -p ${deployPath}
+    console.log('Step 2: Simulating deployment directory creation...');
+    console.log(`Would execute: mkdir -p ${deployPath}`);
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    console.log('Step 3: Uploading files...');
+    console.log('Step 3: Simulating file uploads...');
     const uploadedFiles = [];
     
     for (const file of files) {
-      console.log(`Uploading: ${file.name} (${file.content.length} bytes)`);
+      console.log(`Simulating upload: ${file.name} (${file.content.length} bytes)`);
+      console.log(`Would write to: ${deployPath}/${file.name}`);
       
-      // In a real implementation, this would:
-      // 1. Write file to remote server: echo "content" > ${deployPath}/${file.name}
-      // 2. Set proper permissions: chmod 644 ${deployPath}/${file.name}
+      // In real implementation, this would use SFTP or SCP:
+      // await sftpClient.put(Buffer.from(file.content), `${deployPath}/${file.name}`);
       
       uploadedFiles.push({
         name: file.name,
@@ -91,33 +92,47 @@ serve(async (req) => {
         uploaded: true
       });
       
-      // Simulate upload time
       await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    console.log('Step 4: Setting file permissions...');
-    // chmod -R 644 ${deployPath}/*
+    console.log('Step 4: Simulating file permissions setup...');
+    console.log(`Would execute: chmod 644 ${deployPath}/*`);
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    console.log('Step 5: Restarting web server (if needed)...');
-    // systemctl reload nginx (or apache2)
+    console.log('Step 5: Simulating web server reload...');
+    console.log('Would execute: systemctl reload nginx (or apache2)');
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    console.log('Server deployment completed successfully');
+    console.log('Server deployment simulation completed');
 
-    // Construct the URL where files can be accessed
     const serverUrl = `http://${serverIp}`;
     
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully deployed ${files.length} files to server ${serverIp}`,
+        message: `Server deployment simulated successfully for ${files.length} files`,
         url: serverUrl,
         deployPath: deployPath,
         uploadedFiles: uploadedFiles,
         deployedFiles: files.map(f => f.name),
         timestamp: new Date().toISOString(),
-        note: 'Files deployed to server. Access them at: ' + serverUrl
+        warning: "This is currently a simulation. Real SSH deployment requires additional setup.",
+        implementation_notes: {
+          current_status: "Simulation only",
+          required_for_real_deployment: [
+            "SSH library compatible with Deno (e.g., ssh2-sftp-client port)",
+            "Network connectivity from Supabase Edge Functions to target server",
+            "Proper SSH key authentication setup",
+            "Server firewall configuration to allow connections"
+          ],
+          alternative_solutions: [
+            "Use rsync with SSH keys",
+            "Implement FTP/SFTP deployment",
+            "Use a deployment service like Netlify or Vercel",
+            "Set up a webhook on your server to pull files"
+          ]
+        },
+        note: `Files would be deployed to ${serverUrl} at path ${deployPath}`
       }),
       {
         headers: { 
@@ -135,7 +150,16 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error.message || 'Unknown server deployment error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        troubleshooting: {
+          common_issues: [
+            "Missing server IP, username, or SSH key",
+            "Invalid SSH key format",
+            "Network connectivity issues",
+            "Server firewall blocking connections"
+          ],
+          current_limitation: "Server deployment is currently simulated and requires real SSH implementation"
+        }
       }),
       {
         headers: { 

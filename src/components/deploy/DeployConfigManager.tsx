@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -18,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Plus, Edit, Trash2, Server, Github } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { GitHubTokenSetup } from './GitHubTokenSetup';
 
 type DeployConfig = Tables<'deploy_configs'>;
 type SSHKey = Tables<'ssh_keys'>;
@@ -165,6 +165,8 @@ export const DeployConfigManager = () => {
 
   return (
     <div className="space-y-6">
+      <GitHubTokenSetup />
+      
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-medium">Deploy Configurations</h3>

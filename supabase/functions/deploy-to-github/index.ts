@@ -50,7 +50,8 @@ serve(async (req) => {
     // Get GitHub token from environment
     const githubToken = Deno.env.get('GITHUB_TOKEN');
     if (!githubToken) {
-      throw new Error('GitHub token not configured. Please add GITHUB_TOKEN to your Supabase secrets.');
+      console.error('GitHub token not found in environment variables');
+      throw new Error('GitHub token not configured. Please add GITHUB_TOKEN to your Supabase project secrets in the Dashboard > Project Settings > Edge Functions.');
     }
 
     const [owner, repo] = repository.split('/');
@@ -58,42 +59,56 @@ serve(async (req) => {
 
     console.log('Starting GitHub deployment...');
     console.log(`Target repository: ${repository}`);
+    console.log(`Base URL: ${baseUrl}`);
     
-    // Check if repository exists
+    // Check if repository exists and is accessible
     console.log('Step 1: Checking repository access...');
     const repoResponse = await fetch(`${baseUrl}`, {
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Supabase-Edge-Function',
       },
     });
 
+    console.log(`Repository check response status: ${repoResponse.status}`);
+
     if (!repoResponse.ok) {
+      const errorBody = await repoResponse.text();
+      console.error('Repository access error:', errorBody);
+      
       if (repoResponse.status === 404) {
-        throw new Error(`Repository ${repository} not found or access denied`);
+        throw new Error(`Repository ${repository} not found or access denied. Please ensure the repository exists and your GitHub token has the necessary permissions.`);
+      } else if (repoResponse.status === 401) {
+        throw new Error('GitHub authentication failed. Please check your GITHUB_TOKEN.');
       }
-      throw new Error(`Failed to access repository: ${repoResponse.statusText}`);
+      throw new Error(`Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`);
     }
 
     console.log('Step 2: Getting repository default branch...');
     const repoData = await repoResponse.json();
     const defaultBranch = repoData.default_branch || 'main';
+    console.log(`Default branch: ${defaultBranch}`);
 
     // Get the latest commit SHA for the default branch
     console.log('Step 3: Getting latest commit...');
     const branchResponse = await fetch(`${baseUrl}/branches/${defaultBranch}`, {
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Supabase-Edge-Function',
       },
     });
 
     if (!branchResponse.ok) {
-      throw new Error(`Failed to get branch info: ${branchResponse.statusText}`);
+      const errorBody = await branchResponse.text();
+      console.error('Branch access error:', errorBody);
+      throw new Error(`Failed to get branch info: ${branchResponse.status} ${branchResponse.statusText}`);
     }
 
     const branchData = await branchResponse.json();
     const latestCommitSha = branchData.commit.sha;
+    console.log(`Latest commit SHA: ${latestCommitSha}`);
 
     console.log('Step 4: Creating tree with files...');
     // Create tree with all files
@@ -106,9 +121,10 @@ serve(async (req) => {
       const blobResponse = await fetch(`${baseUrl}/git/blobs`, {
         method: 'POST',
         headers: {
-          'Authorization': `token ${githubToken}`,
+          'Authorization': `Bearer ${githubToken}`,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
+          'User-Agent': 'Supabase-Edge-Function',
         },
         body: JSON.stringify({
           content: btoa(unescape(encodeURIComponent(file.content))), // Base64 encode
@@ -117,10 +133,13 @@ serve(async (req) => {
       });
 
       if (!blobResponse.ok) {
-        throw new Error(`Failed to create blob for ${file.name}: ${blobResponse.statusText}`);
+        const errorBody = await blobResponse.text();
+        console.error(`Blob creation error for ${file.name}:`, errorBody);
+        throw new Error(`Failed to create blob for ${file.name}: ${blobResponse.status} ${blobResponse.statusText}`);
       }
 
       const blobData = await blobResponse.json();
+      console.log(`Created blob for ${file.name}: ${blobData.sha}`);
       
       tree.push({
         path: file.name,
@@ -131,12 +150,14 @@ serve(async (req) => {
     }
 
     // Create new tree
+    console.log('Step 5: Creating new tree...');
     const treeResponse = await fetch(`${baseUrl}/git/trees`, {
       method: 'POST',
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
+        'User-Agent': 'Supabase-Edge-Function',
       },
       body: JSON.stringify({
         base_tree: latestCommitSha,
@@ -145,19 +166,23 @@ serve(async (req) => {
     });
 
     if (!treeResponse.ok) {
-      throw new Error(`Failed to create tree: ${treeResponse.statusText}`);
+      const errorBody = await treeResponse.text();
+      console.error('Tree creation error:', errorBody);
+      throw new Error(`Failed to create tree: ${treeResponse.status} ${treeResponse.statusText}`);
     }
 
     const treeData = await treeResponse.json();
+    console.log(`Created tree: ${treeData.sha}`);
 
-    console.log('Step 5: Creating commit...');
+    console.log('Step 6: Creating commit...');
     // Create commit
     const commitResponse = await fetch(`${baseUrl}/git/commits`, {
       method: 'POST',
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
+        'User-Agent': 'Supabase-Edge-Function',
       },
       body: JSON.stringify({
         message: `Deploy website files - ${new Date().toISOString()}`,
@@ -167,19 +192,23 @@ serve(async (req) => {
     });
 
     if (!commitResponse.ok) {
-      throw new Error(`Failed to create commit: ${commitResponse.statusText}`);
+      const errorBody = await commitResponse.text();
+      console.error('Commit creation error:', errorBody);
+      throw new Error(`Failed to create commit: ${commitResponse.status} ${commitResponse.statusText}`);
     }
 
     const commitData = await commitResponse.json();
+    console.log(`Created commit: ${commitData.sha}`);
 
-    console.log('Step 6: Updating branch reference...');
+    console.log('Step 7: Updating branch reference...');
     // Update branch reference
     const refResponse = await fetch(`${baseUrl}/git/refs/heads/${defaultBranch}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
+        'User-Agent': 'Supabase-Edge-Function',
       },
       body: JSON.stringify({
         sha: commitData.sha,
@@ -187,7 +216,9 @@ serve(async (req) => {
     });
 
     if (!refResponse.ok) {
-      throw new Error(`Failed to update branch: ${refResponse.statusText}`);
+      const errorBody = await refResponse.text();
+      console.error('Reference update error:', errorBody);
+      throw new Error(`Failed to update branch: ${refResponse.status} ${refResponse.statusText}`);
     }
 
     console.log('GitHub deployment completed successfully');
@@ -204,6 +235,7 @@ serve(async (req) => {
         deployedFiles: files.map(f => f.name),
         timestamp: new Date().toISOString(),
         commitSha: commitData.sha,
+        note: `Files have been committed to the ${defaultBranch} branch. If GitHub Pages is enabled, your site will be available at: ${pagesUrl}`
       }),
       {
         headers: { 
@@ -221,7 +253,15 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error.message || 'Unknown GitHub deployment error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        troubleshooting: {
+          steps: [
+            "1. Ensure GITHUB_TOKEN is set in Supabase project secrets",
+            "2. Verify the repository exists and is accessible",
+            "3. Check that the token has 'repo' permissions",
+            "4. Confirm the repository format is 'username/repository-name'"
+          ]
+        }
       }),
       {
         headers: { 
