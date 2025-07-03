@@ -163,7 +163,12 @@ export const DeployConfigManager = () => {
   };
 
   const onSubmit = (data: DeployConfigFormData) => {
-    saveConfigMutation.mutate(data);
+    // Remove ssh_key_id for internal_server type since it's not needed
+    const submitData = { ...data };
+    if (data.type === 'internal_server') {
+      delete (submitData as any).ssh_key_id;
+    }
+    saveConfigMutation.mutate(submitData);
   };
 
   return (
