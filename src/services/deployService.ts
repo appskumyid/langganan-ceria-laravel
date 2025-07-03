@@ -20,6 +20,58 @@ export interface DeployResult {
 }
 
 export class DeployService {
+  static async deployToInternal(
+    config: DeployConfig, 
+    files: UserGeneratedFile[], 
+    userId: string
+  ): Promise<DeployResult> {
+    try {
+      console.log('Starting internal deployment...', { 
+        userId,
+        filesCount: files.length 
+      });
+
+      // Prepare files for deployment
+      const deployFiles = files.map(file => ({
+        name: file.file_name,
+        content: file.html_content || ''
+      }));
+
+      console.log('Files to deploy:', deployFiles.map(f => ({ name: f.name, size: f.content.length })));
+
+      // Call Supabase Edge Function for internal deployment
+      const { data, error } = await supabase.functions.invoke('deploy-to-internal', {
+        body: {
+          userId: userId,
+          files: deployFiles,
+          deployConfig: config
+        }
+      });
+
+      if (error) {
+        console.error('Internal deployment error:', error);
+        throw new Error(error.message || 'Internal deployment failed');
+      }
+
+      console.log('Internal deployment response:', data);
+
+      return {
+        success: true,
+        message: data.message || `Successfully deployed to internal server`,
+        deployPath: data.deployPath,
+        deployedFiles: data.generatedFiles?.map((f: any) => f.name) || [],
+        timestamp: data.timestamp
+      };
+    } catch (error: any) {
+      console.error('Internal deployment failed:', error);
+      return {
+        success: false,
+        message: 'Internal deployment failed',
+        error: error.message || 'Unknown error occurred'
+      };
+    }
+  }
+
   static async deployToGitHub(
     config: DeployConfig, 
     files: UserGeneratedFile[], 
@@ -159,22 +211,6 @@ export class DeployService {
         filesCount: files.length 
       });
 
-      // Validate SSH key
-      if (!config.ssh_key_id) {
-        throw new Error('SSH key not selected in deployment configuration');
-      }
-
-      const { data: sshKey, error: sshKeyError } = await supabase
-        .from('ssh_keys')
-        .select('*')
-        .eq('id', config.ssh_key_id)
-        .single();
-
-      if (sshKeyError || !sshKey) {
-        console.error('SSH key fetch error:', sshKeyError);
-        throw new Error('SSH key not found or access denied');
-      }
-
       if (!files || files.length === 0) {
         throw new Error('No files available for deployment');
       }
@@ -186,9 +222,48 @@ export class DeployService {
       })));
 
       // Deploy based on configuration type
-      if (config.type === 'github') {
+      if (config.type === 'internal_server') {
+        // Get current user ID for internal deployment
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+        return await this.deployToInternal(config, files, user.id);
+      } else if (config.type === 'github') {
+        // Validate SSH key for GitHub deployment
+        if (!config.ssh_key_id) {
+          throw new Error('SSH key not selected in deployment configuration');
+        }
+
+        const { data: sshKey, error: sshKeyError } = await supabase
+          .from('ssh_keys')
+          .select('*')
+          .eq('id', config.ssh_key_id)
+          .single();
+
+        if (sshKeyError || !sshKey) {
+          console.error('SSH key fetch error:', sshKeyError);
+          throw new Error('SSH key not found or access denied');
+        }
+
         return await this.deployToGitHub(config, files, sshKey);
       } else if (config.type === 'server') {
+        // Validate SSH key for server deployment
+        if (!config.ssh_key_id) {
+          throw new Error('SSH key not selected in deployment configuration');
+        }
+
+        const { data: sshKey, error: sshKeyError } = await supabase
+          .from('ssh_keys')
+          .select('*')
+          .eq('id', config.ssh_key_id)
+          .single();
+
+        if (sshKeyError || !sshKey) {
+          console.error('SSH key fetch error:', sshKeyError);
+          throw new Error('SSH key not found or access denied');
+        }
+
         return await this.deployToServer(config, files, sshKey);
       } else {
         throw new Error(`Invalid deployment type: ${config.type}`);

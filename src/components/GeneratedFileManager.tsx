@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw, Server, Rocket, History } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Eye, Github, Settings, Download, RefreshCw, Server, Rocket, History, HardDrive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SSHKeyManager } from '@/components/ssh-keys/SSHKeyManager';
 import { DeployConfigManager } from '@/components/deploy/DeployConfigManager';
@@ -363,10 +363,12 @@ export const GeneratedFileManager = ({ product }: GeneratedFileManagerProps) => 
                                   <div className="flex items-center">
                                     {config.type === 'github' ? (
                                       <Github className="h-4 w-4 mr-2" />
-                                    ) : (
+                                    ) : config.type === 'server' ? (
                                       <Server className="h-4 w-4 mr-2" />
+                                    ) : (
+                                      <HardDrive className="h-4 w-4 mr-2" />
                                     )}
-                                    {config.name} ({config.type === 'github' ? config.github_repo : config.server_ip})
+                                    {config.name} ({config.type === 'github' ? config.github_repo : config.type === 'server' ? config.server_ip : 'Internal Server'})
                                   </div>
                                 </SelectItem>
                               ))}

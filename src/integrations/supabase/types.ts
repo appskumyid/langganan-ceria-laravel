@@ -195,6 +195,7 @@ export type Database = {
           deploy_path: string | null
           github_repo: string | null
           id: string
+          internal_path: string | null
           name: string
           server_ip: string | null
           server_port: number | null
@@ -208,6 +209,7 @@ export type Database = {
           deploy_path?: string | null
           github_repo?: string | null
           id?: string
+          internal_path?: string | null
           name: string
           server_ip?: string | null
           server_port?: number | null
@@ -221,6 +223,7 @@ export type Database = {
           deploy_path?: string | null
           github_repo?: string | null
           id?: string
+          internal_path?: string | null
           name?: string
           server_ip?: string | null
           server_port?: number | null

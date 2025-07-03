@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit, Trash2, Server, Github } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Server, Github, HardDrive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { GitHubTokenSetup } from './GitHubTokenSetup';
 
@@ -24,13 +24,14 @@ type SSHKey = Tables<'ssh_keys'>;
 
 interface DeployConfigFormData {
   name: string;
-  type: 'github' | 'server';
+  type: 'github' | 'server' | 'internal_server';
   github_repo: string;
   server_ip: string;
   server_username: string;
   server_port: number;
   deploy_path: string;
   ssh_key_id: string;
+  internal_path: string;
 }
 
 export const DeployConfigManager = () => {
@@ -49,6 +50,7 @@ export const DeployConfigManager = () => {
       server_port: 22,
       deploy_path: '',
       ssh_key_id: '',
+      internal_path: '',
     },
   });
 
@@ -142,13 +144,14 @@ export const DeployConfigManager = () => {
     setEditingConfig(config);
     form.reset({
       name: config.name,
-      type: config.type as 'github' | 'server',
+      type: config.type as 'github' | 'server' | 'internal_server',
       github_repo: config.github_repo || '',
       server_ip: config.server_ip || '',
       server_username: config.server_username || '',
       server_port: config.server_port || 22,
       deploy_path: config.deploy_path || '',
       ssh_key_id: config.ssh_key_id || '',
+      internal_path: config.internal_path || '',
     });
     setIsFormOpen(true);
   };
@@ -171,7 +174,7 @@ export const DeployConfigManager = () => {
         <div>
           <h3 className="text-lg font-medium">Deploy Configurations</h3>
           <p className="text-sm text-gray-500">
-            Kelola konfigurasi deploy ke GitHub dan Server
+            Kelola konfigurasi deploy ke GitHub, Server, dan Internal Server
           </p>
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -218,6 +221,7 @@ export const DeployConfigManager = () => {
                         <SelectContent>
                           <SelectItem value="github">GitHub Repository</SelectItem>
                           <SelectItem value="server">Server (SSH)</SelectItem>
+                          <SelectItem value="internal_server">Internal Server</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -304,32 +308,50 @@ export const DeployConfigManager = () => {
                       )}
                     />
                   </>
+                 )}
+
+                {deployType === 'internal_server' && (
+                  <FormField
+                    control={form.control}
+                    name="internal_path"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Internal Path (Opsional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="/path/to/custom/location" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="ssh_key_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SSH Key</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih SSH Key" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sshKeys?.map((key) => (
-                            <SelectItem key={key.id} value={key.id}>
-                              {key.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 {(deployType === 'github' || deployType === 'server') && (
+                   <FormField
+                     control={form.control}
+                     name="ssh_key_id"
+                     render={({ field }) => (
+                       <FormItem>
+                         <FormLabel>SSH Key</FormLabel>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Pilih SSH Key" />
+                             </SelectTrigger>
+                           </FormControl>
+                           <SelectContent>
+                             {sshKeys?.map((key) => (
+                               <SelectItem key={key.id} value={key.id}>
+                                 {key.name}
+                               </SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                         <FormMessage />
+                       </FormItem>
+                     )}
+                   />
+                 )}
 
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
@@ -372,10 +394,15 @@ export const DeployConfigManager = () => {
                         <Github className="h-4 w-4 mr-2" />
                         GitHub
                       </>
-                    ) : (
+                    ) : config.type === 'server' ? (
                       <>
                         <Server className="h-4 w-4 mr-2" />
                         Server
+                      </>
+                    ) : (
+                      <>
+                        <HardDrive className="h-4 w-4 mr-2" />
+                        Internal Server
                       </>
                     )}
                   </div>
@@ -383,7 +410,9 @@ export const DeployConfigManager = () => {
                 <TableCell>
                   {config.type === 'github' 
                     ? config.github_repo 
-                    : `${config.server_ip}:${config.server_port}`
+                    : config.type === 'server'
+                    ? `${config.server_ip}:${config.server_port}`
+                    : 'Internal Files Directory'
                   }
                 </TableCell>
                 <TableCell>{new Date(config.created_at).toLocaleDateString('id-ID')}</TableCell>
