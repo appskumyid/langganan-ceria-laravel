@@ -3,9 +3,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SSHKeyManager } from "@/components/ssh-keys/SSHKeyManager";
 import { DeployConfigManager } from "@/components/deploy/DeployConfigManager";
+import { AdminFileManager } from "@/components/AdminFileManager";
 import AdminSettings from "@/components/AdminSettings";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Settings = () => {
+  const { isAdmin } = useUserRole();
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
@@ -14,10 +18,11 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="general">Umum</TabsTrigger>
           <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
           <TabsTrigger value="deploy-config">Deploy Config</TabsTrigger>
+          {isAdmin && <TabsTrigger value="file-manager">File Manager</TabsTrigger>}
           <TabsTrigger value="profile">Profil</TabsTrigger>
         </TabsList>
 
@@ -52,6 +57,12 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="file-manager">
+            <AdminFileManager />
+          </TabsContent>
+        )}
 
         <TabsContent value="profile">
           <Card>
