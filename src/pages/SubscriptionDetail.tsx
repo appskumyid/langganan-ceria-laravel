@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import type { VariantProps } from 'class-variance-authority';
 import SubscriptionManagementForms from '@/components/SubscriptionManagementForms';
+import { DeployedFileManager } from '@/components/DeployedFileManager';
 
 const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
   switch (status) {
@@ -133,6 +134,10 @@ const SubscriptionDetail = () => {
       </Card>
 
       <SubscriptionManagementForms subscription={subscription} />
+      
+      {subscription.subscription_status === 'active' && (
+        <DeployedFileManager subscriptionId={subscription.id} />
+      )}
     </div>
   );
 };

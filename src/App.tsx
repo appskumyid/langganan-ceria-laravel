@@ -8,6 +8,7 @@ import Homepage from "./pages/Homepage";
 import Products from "./pages/Products";
 import Services from "./pages/Services";
 import Payment from "./pages/Payment";
+import SubscriptionRenewal from "./pages/SubscriptionRenewal";
 import Contact from "./pages/Contact";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -149,16 +150,12 @@ const App = () => (
               </ProtectedRoute>
             } 
           />
-          {/* Placeholder for renewal page - you can implement this later */}
           <Route 
             path="/renew/:subscriptionId" 
             element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="p-6 text-center">
-                    <h1 className="text-2xl font-bold mb-4">Perpanjangan Langganan</h1>
-                    <p className="text-gray-600">Fitur perpanjangan langganan akan segera tersedia.</p>
-                  </div>
+                  <SubscriptionRenewal />
                 </Layout>
               </ProtectedRoute>
             } 
