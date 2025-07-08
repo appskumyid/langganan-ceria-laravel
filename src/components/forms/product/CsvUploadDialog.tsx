@@ -33,8 +33,8 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
   const [error, setError] = useState('');
 
   const handleDownloadTemplate = () => {
-    const headers = ['name', 'price', 'category', 'description', 'image_url'];
-    const exampleRow = ['Kaos Polos Keren', '75000', 'Pakaian', 'Kaos katun combed 30s, nyaman dipakai', 'https://example.com/image.jpg'];
+    const headers = ['name', 'price', 'category', 'description', 'image_url', 'enabled'];
+    const exampleRow = ['Kaos Polos Keren', '75000', 'Pakaian', 'Kaos katun combed 30s, nyaman dipakai', 'https://example.com/image.jpg', 'true'];
     const csvContent = [headers.join(','), exampleRow.join(',')].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -62,6 +62,9 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
         transform: (value, header) => {
             if (header === 'price') {
                 return parseFloat(value);
+            }
+            if (header === 'enabled') {
+                return value.toLowerCase() === 'true' || value === '1';
             }
             return value;
         },
@@ -112,7 +115,7 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
           <DialogTitle>Unggah Produk via CSV</DialogTitle>
           <DialogDescription>
             Pilih file CSV untuk mengunggah produk secara massal. Pastikan file Anda memiliki kolom header: 
-            `name`, `price`, `category`, `description`, dan `image_url`. Kolom `name` dan `price` wajib diisi.
+            `name`, `price`, `category`, `description`, `image_url`, dan `enabled`. Kolom `name` dan `price` wajib diisi.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -132,6 +135,7 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
                     <TableHead>Nama Produk</TableHead>
                     <TableHead>Harga</TableHead>
                     <TableHead>Kategori</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -140,6 +144,13 @@ export const CsvUploadDialog = ({ isOpen, onOpenChange, onUpload, isUploading }:
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.price.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{product.category || '-'}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          product.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {product.enabled ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

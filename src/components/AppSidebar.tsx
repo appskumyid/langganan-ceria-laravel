@@ -39,7 +39,7 @@ const AppSidebar = () => {
       title: "Pengaturan",
       icon: Settings,
       href: "/settings",
-      adminOnly: false,
+      adminOnly: true,
     },
     {
       title: "Admin Dashboard",

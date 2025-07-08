@@ -18,6 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, PlusCircle, Pencil, Trash2, Upload } from 'lucide-react';
 import {
@@ -47,6 +48,7 @@ const productFormSchema = z.object({
   ),
   description: z.string().optional(),
   image_url: z.string().url({ message: "URL gambar tidak valid." }).or(z.literal("")).optional(),
+  enabled: z.boolean().default(true),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -88,7 +90,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: { name: '', price: 0, description: '', category: '', image_url: '' },
+    defaultValues: { name: '', price: 0, description: '', category: '', image_url: '', enabled: true },
   });
   const imageUrl = form.watch('image_url');
 
@@ -105,6 +107,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
         description: values.description,
         category: values.category,
         image_url: values.image_url,
+        enabled: values.enabled,
       };
 
       const { data, error } = await supabase
@@ -133,6 +136,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
       const productsToUpsert = newProducts.map(p => ({
         ...p,
         price: Number(p.price) || 0,
+        enabled: p.enabled !== undefined ? p.enabled : true,
         store_details_id: storeDetails.id,
         user_id: storeDetails.user_id,
       }));
@@ -177,7 +181,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
 
   const handleAddNew = () => {
     setEditingProduct(null);
-    form.reset({ name: '', price: 0, description: '', image_url: '', category: '' });
+    form.reset({ name: '', price: 0, description: '', image_url: '', category: '', enabled: true });
     setIsFormDialogOpen(true);
   };
   
@@ -189,6 +193,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
       description: product.description ?? '',
       image_url: product.image_url ?? '',
       category: product.category ?? '',
+      enabled: product.enabled ?? true,
     });
     setIsFormDialogOpen(true);
   };
@@ -251,6 +256,7 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
                 <TableHead>Nama Produk</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead>Harga</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -268,6 +274,13 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category || '-'}</TableCell>
                   <TableCell>Rp{product.price.toLocaleString('id-ID')}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      product.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.enabled ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </TableCell>
                   <TableCell className="max-w-[200px] truncate">{product.description || '-'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -324,6 +337,22 @@ const ProductManager = ({ storeDetails }: ProductManagerProps) => {
                   <FormLabel>URL Gambar Produk</FormLabel>
                   <FormControl><Input placeholder="https://example.com/gambar.jpg" {...field} value={field.value ?? ''} /></FormControl>
                   <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="enabled" render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Status Produk</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Produk akan ditampilkan di toko jika diaktifkan
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )} />
               {imageUrl && (
