@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import type { VariantProps } from 'class-variance-authority';
 import SubscriptionManagementForms from '@/components/SubscriptionManagementForms';
 import { DeployedFileManager } from '@/components/DeployedFileManager';
+import { EcommercePublishManager } from '@/components/EcommercePublishManager';
 
 const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
   switch (status) {
@@ -136,7 +137,11 @@ const SubscriptionDetail = () => {
       <SubscriptionManagementForms subscription={subscription} />
       
       {subscription.subscription_status === 'active' && (
-        <DeployedFileManager subscriptionId={subscription.id} />
+        subscription.product_category === 'E-Commerce' ? (
+          <EcommercePublishManager subscription={subscription} />
+        ) : (
+          <DeployedFileManager subscriptionId={subscription.id} />
+        )
       )}
     </div>
   );
