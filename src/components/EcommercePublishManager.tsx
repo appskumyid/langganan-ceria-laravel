@@ -49,12 +49,6 @@ const fetchProductFiles = async (productName: string) => {
 };
 
 const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, storeData: any, transactionCode: string) => {
-  const { user } = useAuth();
-  
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
   console.log("Starting file generation for subscription:", subscription.id);
 
   // Fetch store products
@@ -88,7 +82,7 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
       id: 'data-json',
       file_name: 'data.json',
       html_content: JSON.stringify(dataJson, null, 2),
-      product_id: files[0]?.product_id,
+      product_id: files[0]?.product_id || '',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -103,17 +97,17 @@ const generateUserFiles = async (subscription: Tables<'user_subscriptions'>, sto
     if (file.file_name !== 'data.json') {
       // Replace placeholders with actual store data
       processedContent = processedContent
-        .replace(/{{store_name}}/g, storeData.store_name || '')
-        .replace(/{{about_store}}/g, storeData.about_store || '')
-        .replace(/{{phone_number}}/g, storeData.phone_number || '')
-        .replace(/{{store_address}}/g, storeData.store_address || '')
-        .replace(/{{facebook_url}}/g, storeData.facebook_url || '')
-        .replace(/{{instagram_url}}/g, storeData.instagram_url || '')
-        .replace(/{{linkedin_url}}/g, storeData.linkedin_url || '')
-        .replace(/{{youtube_url}}/g, storeData.youtube_url || '');
+        .replace(/\{\{store_name\}\}/g, storeData.store_name || '')
+        .replace(/\{\{about_store\}\}/g, storeData.about_store || '')
+        .replace(/\{\{phone_number\}\}/g, storeData.phone_number || '')
+        .replace(/\{\{store_address\}\}/g, storeData.store_address || '')
+        .replace(/\{\{facebook_url\}\}/g, storeData.facebook_url || '')
+        .replace(/\{\{instagram_url\}\}/g, storeData.instagram_url || '')
+        .replace(/\{\{linkedin_url\}\}/g, storeData.linkedin_url || '')
+        .replace(/\{\{youtube_url\}\}/g, storeData.youtube_url || '');
     }
 
-    // Generate file path with transaction code folder
+    // Generate file path with transaction code folder - preserve original file extension
     const fileName = `files/${transactionCode}/${file.file_name}`;
 
     console.log("Upserting file:", fileName);
@@ -177,7 +171,7 @@ export const EcommercePublishManager = ({ subscription }: EcommercePublishManage
   const publishMutation = useMutation({
     mutationFn: async () => {
       if (!storeDetails) {
-        throw new Error('Detail toko belum diisi. Silakan isi detail toko terlebih dahulu.');
+        throw new Error("Detail toko belum diisi. Silakan isi detail toko terlebih dahulu.");
       }
       await generateUserFiles(subscription, storeDetails, transactionNumber);
     },
