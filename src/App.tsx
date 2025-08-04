@@ -12,6 +12,8 @@ import SubscriptionRenewal from "./pages/SubscriptionRenewal";
 import Contact from "./pages/Contact";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProducts from "./pages/AdminProducts";
 import AdminServices from "./pages/AdminServices";
@@ -50,6 +52,17 @@ const App = () => (
             } 
           />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route 
+            path="/change-password" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ChangePassword />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/dashboard" 
             element={

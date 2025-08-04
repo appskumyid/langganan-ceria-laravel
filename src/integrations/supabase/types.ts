@@ -247,6 +247,41 @@ export type Database = {
           },
         ]
       }
+      deployment_status: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          subdomain: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          subdomain: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          subdomain?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deployment_status_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_invitations: {
         Row: {
           bride_name: string
@@ -732,6 +767,7 @@ export type Database = {
           product_static_id: number
           product_type: string
           rejection_reason: string | null
+          subdomain: string | null
           subscribed_at: string
           subscription_status: string
           updated_at: string
@@ -753,6 +789,7 @@ export type Database = {
           product_static_id: number
           product_type: string
           rejection_reason?: string | null
+          subdomain?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string
@@ -774,6 +811,7 @@ export type Database = {
           product_static_id?: number
           product_type?: string
           rejection_reason?: string | null
+          subdomain?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string

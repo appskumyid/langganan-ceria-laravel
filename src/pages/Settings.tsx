@@ -6,6 +6,7 @@ import { DeployConfigManager } from "@/components/deploy/DeployConfigManager";
 import { AdminFileManager } from "@/components/AdminFileManager";
 import AdminSettings from "@/components/AdminSettings";
 import { useUserRole } from "@/hooks/useUserRole";
+import ChangePassword from "@/pages/ChangePassword";
 
 const Settings = () => {
   const { isAdmin } = useUserRole();
@@ -73,9 +74,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <p>Fitur pengaturan profil akan segera tersedia.</p>
-              </div>
+              <ChangePassword />
             </CardContent>
           </Card>
         </TabsContent>
