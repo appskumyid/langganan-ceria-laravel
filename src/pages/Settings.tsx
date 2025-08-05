@@ -7,6 +7,7 @@ import { AdminFileManager } from "@/components/AdminFileManager";
 import AdminSettings from "@/components/AdminSettings";
 import { useUserRole } from "@/hooks/useUserRole";
 import ChangePassword from "@/pages/ChangePassword";
+import DomainManager from "@/components/DomainManager";
 
 const Settings = () => {
   const { isAdmin } = useUserRole();
@@ -19,8 +20,9 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="general">Umum</TabsTrigger>
+          <TabsTrigger value="domains">Domain</TabsTrigger>
           <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
           <TabsTrigger value="deploy-config">Deploy Config</TabsTrigger>
           {isAdmin && <TabsTrigger value="file-manager">File Manager</TabsTrigger>}
@@ -29,6 +31,10 @@ const Settings = () => {
 
         <TabsContent value="general">
           <AdminSettings />
+        </TabsContent>
+
+        <TabsContent value="domains">
+          <DomainManager />
         </TabsContent>
 
         <TabsContent value="ssh-keys">
