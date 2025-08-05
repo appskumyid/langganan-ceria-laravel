@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { Home, User, ShoppingBag, Package, Receipt, Settings, Users, Briefcase } from "lucide-react"
+import { Home, User, ShoppingBag, Package, Receipt, Settings, Users, Briefcase, Globe } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useUserRole } from "@/hooks/useUserRole"
 
@@ -17,6 +17,12 @@ const AppSidebar = () => {
   const navigate = useNavigate();
 
   const menuItems = [
+    {
+      title: "Website",
+      icon: Globe,
+      href: "/",
+      adminOnly: false,
+    },
     {
       title: "Dashboard",
       icon: Home,
