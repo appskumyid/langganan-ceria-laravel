@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 interface ProductCategory {
   id: string;
   name: string;
+  domain_name?: string;
   description?: string;
 }
 
@@ -23,9 +24,9 @@ const ProductCategoryManager = () => {
     { id: "6", name: "Aplikasi Bisnis (ERP, POS, LMS, dll)", description: "Sistem aplikasi untuk bisnis" }
   ]);
   
-  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [newCategory, setNewCategory] = useState({ name: "", domain_name: "", description: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingCategory, setEditingCategory] = useState({ name: "", description: "" });
+  const [editingCategory, setEditingCategory] = useState({ name: "", domain_name: "", description: "" });
 
   const handleAddCategory = () => {
     if (!newCategory.name.trim()) {
@@ -40,11 +41,12 @@ const ProductCategoryManager = () => {
     const category: ProductCategory = {
       id: Date.now().toString(),
       name: newCategory.name,
+      domain_name: newCategory.domain_name,
       description: newCategory.description
     };
 
     setCategories([...categories, category]);
-    setNewCategory({ name: "", description: "" });
+    setNewCategory({ name: "", domain_name: "", description: "" });
     
     toast({
       title: "Berhasil",
@@ -56,7 +58,7 @@ const ProductCategoryManager = () => {
     const category = categories.find(c => c.id === id);
     if (category) {
       setEditingId(id);
-      setEditingCategory({ name: category.name, description: category.description || "" });
+      setEditingCategory({ name: category.name, domain_name: category.domain_name || "", description: category.description || "" });
     }
   };
 
@@ -72,12 +74,12 @@ const ProductCategoryManager = () => {
 
     setCategories(categories.map(c => 
       c.id === editingId 
-        ? { ...c, name: editingCategory.name, description: editingCategory.description }
+        ? { ...c, name: editingCategory.name, domain_name: editingCategory.domain_name, description: editingCategory.description }
         : c
     ));
     
     setEditingId(null);
-    setEditingCategory({ name: "", description: "" });
+    setEditingCategory({ name: "", domain_name: "", description: "" });
     
     toast({
       title: "Berhasil",
@@ -111,6 +113,15 @@ const ProductCategoryManager = () => {
               value={newCategory.name}
               onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
               placeholder="Masukkan nama kategori"
+            />
+          </div>
+          <div>
+            <Label htmlFor="domainName">Nama Domain (Opsional)</Label>
+            <Input
+              id="domainName"
+              value={newCategory.domain_name}
+              onChange={(e) => setNewCategory({ ...newCategory, domain_name: e.target.value })}
+              placeholder="contoh: example.com"
             />
           </div>
           <div>
@@ -153,6 +164,15 @@ const ProductCategoryManager = () => {
                       />
                     </div>
                     <div>
+                      <Label htmlFor={`edit-domain-${category.id}`}>Nama Domain</Label>
+                      <Input
+                        id={`edit-domain-${category.id}`}
+                        value={editingCategory.domain_name}
+                        onChange={(e) => setEditingCategory({ ...editingCategory, domain_name: e.target.value })}
+                        placeholder="contoh: example.com"
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor={`edit-desc-${category.id}`}>Deskripsi</Label>
                       <Textarea
                         id={`edit-desc-${category.id}`}
@@ -178,6 +198,11 @@ const ProductCategoryManager = () => {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h4 className="font-medium text-lg">{category.name}</h4>
+                      {category.domain_name && (
+                        <p className="text-blue-600 text-sm font-mono">
+                          {category.domain_name}
+                        </p>
+                      )}
                       {category.description && (
                         <p className="text-muted-foreground text-sm mt-1">
                           {category.description}
