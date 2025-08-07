@@ -1,33 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Edit } from "lucide-react";
+import { Trash2, Plus, Edit, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductCategory {
   id: string;
   name: string;
   domain_name?: string;
   description?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const ProductCategoryManager = () => {
-  const [categories, setCategories] = useState<ProductCategory[]>([
-    { id: "1", name: "E-Commerce", description: "Toko online dan platform jual beli" },
-    { id: "2", name: "Company Profile", description: "Website profil perusahaan" },
-    { id: "3", name: "CV / Portfolio", description: "CV digital dan portofolio profesional" },
-    { id: "4", name: "Undangan Digital", description: "Undangan pernikahan dan acara digital" },
-    { id: "5", name: "Aplikasi Bisnis (ERP, POS, LMS, dll)", description: "Sistem aplikasi untuk bisnis dan manajemen" }
-  ]);
-  
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [loading, setLoading] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: "", domain_name: "", description: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState({ name: "", domain_name: "", description: "" });
 
-  const handleAddCategory = () => {
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat kategori produk",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
     if (!newCategory.name.trim()) {
       toast({
         title: "Error",
@@ -37,20 +60,35 @@ const ProductCategoryManager = () => {
       return;
     }
 
-    const category: ProductCategory = {
-      id: Date.now().toString(),
-      name: newCategory.name,
-      domain_name: newCategory.domain_name,
-      description: newCategory.description
-    };
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('product_categories')
+        .insert({
+          name: newCategory.name.trim(),
+          domain_name: newCategory.domain_name.trim() || null,
+          description: newCategory.description.trim() || null
+        });
 
-    setCategories([...categories, category]);
-    setNewCategory({ name: "", domain_name: "", description: "" });
-    
-    toast({
-      title: "Berhasil",
-      description: "Kategori produk berhasil ditambahkan"
-    });
+      if (error) throw error;
+
+      setNewCategory({ name: "", domain_name: "", description: "" });
+      fetchCategories();
+      
+      toast({
+        title: "Berhasil",
+        description: "Kategori produk berhasil ditambahkan"
+      });
+    } catch (error: any) {
+      console.error('Error adding category:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menambahkan kategori",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEditCategory = (id: string) => {
@@ -61,7 +99,7 @@ const ProductCategoryManager = () => {
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingCategory.name.trim()) {
       toast({
         title: "Error",
@@ -71,27 +109,66 @@ const ProductCategoryManager = () => {
       return;
     }
 
-    setCategories(categories.map(c => 
-      c.id === editingId 
-        ? { ...c, name: editingCategory.name, domain_name: editingCategory.domain_name, description: editingCategory.description }
-        : c
-    ));
-    
-    setEditingId(null);
-    setEditingCategory({ name: "", domain_name: "", description: "" });
-    
-    toast({
-      title: "Berhasil",
-      description: "Kategori produk berhasil diperbarui"
-    });
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('product_categories')
+        .update({
+          name: editingCategory.name.trim(),
+          domain_name: editingCategory.domain_name.trim() || null,
+          description: editingCategory.description.trim() || null
+        })
+        .eq('id', editingId);
+
+      if (error) throw error;
+
+      setEditingId(null);
+      setEditingCategory({ name: "", domain_name: "", description: "" });
+      fetchCategories();
+      
+      toast({
+        title: "Berhasil",
+        description: "Kategori produk berhasil diperbarui"
+      });
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memperbarui kategori",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteCategory = (id: string) => {
-    setCategories(categories.filter(c => c.id !== id));
-    toast({
-      title: "Berhasil",
-      description: "Kategori produk berhasil dihapus"
-    });
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus kategori ini?')) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('product_categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchCategories();
+      toast({
+        title: "Berhasil",
+        description: "Kategori produk berhasil dihapus"
+      });
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menghapus kategori",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,8 +210,8 @@ const ProductCategoryManager = () => {
               rows={3}
             />
           </div>
-          <Button onClick={handleAddCategory} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleAddCategory} className="w-full" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
             Tambah Kategori
           </Button>
         </CardContent>
@@ -149,8 +226,17 @@ const ProductCategoryManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {categories.map((category) => (
+          {loading ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : categories.length === 0 ? (
+            <p className="text-muted-foreground text-center p-4">
+              Belum ada kategori yang terdaftar
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {categories.map((category) => (
               <div key={category.id} className="border rounded-lg p-4">
                 {editingId === category.id ? (
                   <div className="space-y-4">
@@ -181,13 +267,15 @@ const ProductCategoryManager = () => {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSaveEdit} size="sm">
+                      <Button onClick={handleSaveEdit} size="sm" disabled={loading}>
+                        {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                         Simpan
                       </Button>
                       <Button 
                         onClick={() => setEditingId(null)} 
                         variant="outline" 
                         size="sm"
+                        disabled={loading}
                       >
                         Batal
                       </Button>
@@ -213,6 +301,7 @@ const ProductCategoryManager = () => {
                         onClick={() => handleEditCategory(category.id)}
                         variant="outline"
                         size="sm"
+                        disabled={loading}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -220,6 +309,7 @@ const ProductCategoryManager = () => {
                         onClick={() => handleDeleteCategory(category.id)}
                         variant="destructive"
                         size="sm"
+                        disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -227,8 +317,9 @@ const ProductCategoryManager = () => {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

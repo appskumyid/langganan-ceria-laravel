@@ -338,33 +338,6 @@ export type Database = {
           },
         ]
       }
-      domains: {
-        Row: {
-          created_at: string
-          domain_name: string
-          id: string
-          is_enabled: boolean
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          domain_name: string
-          id?: string
-          is_enabled?: boolean
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          domain_name?: string
-          id?: string
-          is_enabled?: boolean
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       managed_products: {
         Row: {
           category: string
@@ -445,6 +418,33 @@ export type Database = {
           id?: string
           name?: string
           pricing?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain_name: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain_name?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain_name?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
