@@ -16,12 +16,11 @@ interface ProductCategory {
 
 const ProductCategoryManager = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([
-    { id: "1", name: "Website", description: "Website dan aplikasi web" },
-    { id: "2", name: "Mobile App", description: "Aplikasi mobile iOS dan Android" },
-    { id: "3", name: "Digital Marketing", description: "Layanan pemasaran digital" },
-    { id: "4", name: "Design", description: "Layanan desain grafis dan UI/UX" },
-    { id: "5", name: "Consulting", description: "Konsultasi IT dan bisnis" },
-    { id: "6", name: "Aplikasi Bisnis (ERP, POS, LMS, dll)", description: "Sistem aplikasi untuk bisnis" }
+    { id: "1", name: "E-Commerce", description: "Toko online dan platform jual beli" },
+    { id: "2", name: "Company Profile", description: "Website profil perusahaan" },
+    { id: "3", name: "CV / Portfolio", description: "CV digital dan portofolio profesional" },
+    { id: "4", name: "Undangan Digital", description: "Undangan pernikahan dan acara digital" },
+    { id: "5", name: "Aplikasi Bisnis (ERP, POS, LMS, dll)", description: "Sistem aplikasi untuk bisnis dan manajemen" }
   ]);
   
   const [newCategory, setNewCategory] = useState({ name: "", domain_name: "", description: "" });
