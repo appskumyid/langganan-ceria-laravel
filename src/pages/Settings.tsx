@@ -8,6 +8,7 @@ import AdminSettings from "@/components/AdminSettings";
 import { useUserRole } from "@/hooks/useUserRole";
 import ChangePassword from "@/pages/ChangePassword";
 import DomainManager from "@/components/DomainManager";
+import ProductCategoryManager from "@/components/ProductCategoryManager";
 
 const Settings = () => {
   const { isAdmin } = useUserRole();
@@ -20,12 +21,13 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
           <TabsTrigger value="general">Umum</TabsTrigger>
           <TabsTrigger value="domains">Domain</TabsTrigger>
           <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
           <TabsTrigger value="deploy-config">Deploy Config</TabsTrigger>
           {isAdmin && <TabsTrigger value="file-manager">File Manager</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="product-categories">Kategori Produk</TabsTrigger>}
           <TabsTrigger value="profile">Profil</TabsTrigger>
         </TabsList>
 
@@ -68,6 +70,22 @@ const Settings = () => {
         {isAdmin && (
           <TabsContent value="file-manager">
             <AdminFileManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="product-categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Kelola Kategori Produk</CardTitle>
+                <CardDescription>
+                  Atur dan kelola kategori produk untuk mengorganisir produk yang tersedia
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProductCategoryManager />
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
 
