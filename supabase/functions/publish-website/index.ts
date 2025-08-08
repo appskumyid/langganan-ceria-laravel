@@ -96,42 +96,41 @@ const handler = async (req: Request): Promise<Response> => {
       throw categoryError;
     }
 
-    // Use category domain name or generate random subdomain as fallback
+    // Always generate random unique subdomain
     let subdomain: string;
     let fullDomain: string;
+    let isUnique = false;
+    let attempts = 0;
     
+    // Generate unique random subdomain
+    do {
+      subdomain = generateSubdomain();
+      attempts++;
+      
+      // Check if subdomain already exists
+      const { data: existingSubscription } = await supabaseClient
+        .from('user_subscriptions')
+        .select('id')
+        .eq('subdomain', subdomain)
+        .single();
+      
+      isUnique = !existingSubscription;
+      
+      if (attempts > 10) {
+        throw new Error('Failed to generate unique subdomain');
+      }
+    } while (!isUnique);
+    
+    // Set fullDomain based on category domain configuration
     if (category?.domain_name) {
       // If domain_name contains a dot, it's a full domain, otherwise treat as subdomain
       if (category.domain_name.includes('.')) {
-        subdomain = category.domain_name;
         fullDomain = category.domain_name;
       } else {
-        subdomain = category.domain_name;
-        fullDomain = `${subdomain}.appsku.my.id`;
+        fullDomain = `${category.domain_name}.appsku.my.id`;
       }
     } else {
-      // Fallback to random subdomain generation
-      let isUnique = false;
-      let attempts = 0;
-      
-      do {
-        subdomain = generateSubdomain();
-        attempts++;
-        
-        // Check if subdomain already exists
-        const { data: existingSubscription } = await supabaseClient
-          .from('user_subscriptions')
-          .select('id')
-          .eq('subdomain', subdomain)
-          .single();
-        
-        isUnique = !existingSubscription;
-        
-        if (attempts > 10) {
-          throw new Error('Failed to generate unique subdomain');
-        }
-      } while (!isUnique);
-      
+      // Fallback to random subdomain with default domain
       fullDomain = `${subdomain}.appsku.my.id`;
     }
 
