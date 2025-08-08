@@ -123,12 +123,8 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Set fullDomain based on category domain configuration
     if (category?.domain_name) {
-      // If domain_name contains a dot, it's a full domain, otherwise treat as subdomain
-      if (category.domain_name.includes('.')) {
-        fullDomain = category.domain_name;
-      } else {
-        fullDomain = `${category.domain_name}.appsku.my.id`;
-      }
+      // Use random subdomain with category domain
+      fullDomain = `${subdomain}.${category.domain_name}`;
     } else {
       // Fallback to random subdomain with default domain
       fullDomain = `${subdomain}.appsku.my.id`;
