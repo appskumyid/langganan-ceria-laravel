@@ -74,28 +74,56 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate unique subdomain
+    // Get subscription details to find the product category
+    const { data: subscription, error: subscriptionError } = await supabaseClient
+      .from('user_subscriptions')
+      .select('product_category')
+      .eq('id', subscriptionId)
+      .single();
+
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
+
+    // Get domain name from product category
+    const { data: category, error: categoryError } = await supabaseClient
+      .from('product_categories')
+      .select('domain_name')
+      .eq('name', subscription.product_category)
+      .single();
+
+    if (categoryError) {
+      throw categoryError;
+    }
+
+    // Use category domain name or generate random subdomain as fallback
     let subdomain: string;
-    let isUnique = false;
-    let attempts = 0;
     
-    do {
-      subdomain = generateSubdomain();
-      attempts++;
+    if (category?.domain_name) {
+      subdomain = category.domain_name;
+    } else {
+      // Fallback to random subdomain generation
+      let isUnique = false;
+      let attempts = 0;
       
-      // Check if subdomain already exists
-      const { data: existingSubscription } = await supabaseClient
-        .from('user_subscriptions')
-        .select('id')
-        .eq('subdomain', subdomain)
-        .single();
-      
-      isUnique = !existingSubscription;
-      
-      if (attempts > 10) {
-        throw new Error('Failed to generate unique subdomain');
-      }
-    } while (!isUnique);
+      do {
+        subdomain = generateSubdomain();
+        attempts++;
+        
+        // Check if subdomain already exists
+        const { data: existingSubscription } = await supabaseClient
+          .from('user_subscriptions')
+          .select('id')
+          .eq('subdomain', subdomain)
+          .single();
+        
+        isUnique = !existingSubscription;
+        
+        if (attempts > 10) {
+          throw new Error('Failed to generate unique subdomain');
+        }
+      } while (!isUnique);
+    }
 
     // Update subscription with subdomain
     const { error: updateError } = await supabaseClient
