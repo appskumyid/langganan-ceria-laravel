@@ -98,9 +98,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Use category domain name or generate random subdomain as fallback
     let subdomain: string;
+    let fullDomain: string;
     
     if (category?.domain_name) {
-      subdomain = category.domain_name;
+      // If domain_name contains a dot, it's a full domain, otherwise treat as subdomain
+      if (category.domain_name.includes('.')) {
+        subdomain = category.domain_name;
+        fullDomain = category.domain_name;
+      } else {
+        subdomain = category.domain_name;
+        fullDomain = `${subdomain}.appsku.my.id`;
+      }
     } else {
       // Fallback to random subdomain generation
       let isUnique = false;
@@ -123,6 +131,8 @@ const handler = async (req: Request): Promise<Response> => {
           throw new Error('Failed to generate unique subdomain');
         }
       } while (!isUnique);
+      
+      fullDomain = `${subdomain}.appsku.my.id`;
     }
 
     // Update subscription with subdomain
@@ -167,8 +177,6 @@ const handler = async (req: Request): Promise<Response> => {
             .eq('subscription_id', subscriptionId);
         })
     );
-
-    const fullDomain = `${subdomain}.appsku.my.id`;
 
     return new Response(
       JSON.stringify({
