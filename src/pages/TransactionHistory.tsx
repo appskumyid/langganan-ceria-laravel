@@ -2,50 +2,60 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Receipt, Calendar, CreditCard } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Loader2, Receipt, Calendar, CreditCard, Check, X } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { getStatusVariant } from '@/components/admin/subscriptions/utils';
 
 const TransactionHistory = () => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState<Tables<'user_subscriptions'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchTransactions = async () => {
+    if (!user) {
+      setLoading(false);
+      setError("Pengguna tidak ditemukan. Silakan login ulang.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let query = supabase
+        .from('user_subscriptions')
+        .select('*');
+      
+      // If admin, show all transactions, otherwise show only user's transactions
+      if (!isAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error: dbError } = await query.order('created_at', { ascending: false });
+
+      if (dbError) {
+        throw dbError;
+      }
+      setTransactions(data || []);
+    } catch (e: any) {
+      console.error("Error fetching transactions:", e);
+      setError(e.message || "Gagal memuat data transaksi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!user) {
-        setLoading(false);
-        setError("Pengguna tidak ditemukan. Silakan login ulang.");
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data, error: dbError } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (dbError) {
-          throw dbError;
-        }
-        setTransactions(data || []);
-      } catch (e: any) {
-        console.error("Error fetching transactions:", e);
-        setError(e.message || "Gagal memuat data transaksi.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTransactions();
-  }, [user]);
+  }, [user, isAdmin]);
 
   // Generate transaction number
   const generateTransactionNumber = (id: string, createdAt: string) => {
@@ -55,6 +65,88 @@ const TransactionHistory = () => {
     const day = date.getDate().toString().padStart(2, '0');
     const shortId = id.slice(0, 8).toUpperCase();
     return `TRX${year}${month}${day}${shortId}`;
+  };
+
+  // Admin functions for approval
+  const handleApprove = async (transaction: Tables<'user_subscriptions'>) => {
+    try {
+      const now = new Date();
+      let expiresAt = new Date();
+      
+      // Calculate expiry based on period
+      const period = transaction.product_period.toLowerCase();
+      if (period.includes('3') && period.includes('bulan')) {
+        expiresAt.setMonth(now.getMonth() + 3);
+      } else if (period.includes('6') && period.includes('bulan')) {
+        expiresAt.setMonth(now.getMonth() + 6);
+      } else if (period.includes('tahun')) {
+        expiresAt.setFullYear(now.getFullYear() + 1);
+      } else {
+        expiresAt.setMonth(now.getMonth() + 1);
+      }
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          subscription_status: 'active',
+          expires_at: expiresAt.toISOString(),
+          subscribed_at: now.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      // Refresh transactions
+      await fetchTransactions();
+      
+      // Sync with mailchimp
+      supabase.functions.invoke('mailchimp-sync', {
+        body: { subscription_id: transaction.id }
+      });
+
+      toast({
+        title: 'Berhasil',
+        description: 'Perpanjangan berhasil disetujui',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReject = async (transaction: Tables<'user_subscriptions'>) => {
+    const reason = window.prompt("Masukkan alasan penolakan (kosongkan jika tidak ada):");
+    
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          subscription_status: 'pending_payment',
+          rejection_reason: reason || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      // Refresh transactions
+      await fetchTransactions();
+
+      toast({
+        title: 'Berhasil',
+        description: 'Perpanjangan ditolak',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
@@ -77,7 +169,9 @@ const TransactionHistory = () => {
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex items-center gap-3 mb-6">
         <Receipt className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold text-gray-800">Riwayat Transaksi</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          {isAdmin ? 'Riwayat Transaksi Semua Pengguna' : 'Riwayat Transaksi'}
+        </h1>
       </div>
       
       {transactions.length === 0 ? (
@@ -143,6 +237,44 @@ const TransactionHistory = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Admin customer info */}
+                  {isAdmin && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">Nama Pelanggan</p>
+                          <p className="font-medium">{transaction.customer_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Email</p>
+                          <p className="font-medium">{transaction.customer_email}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Admin approval buttons for waiting_confirmation status */}
+                  {isAdmin && transaction.subscription_status === 'waiting_confirmation' && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                      <Button
+                        onClick={() => handleApprove(transaction)}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Setujui Perpanjangan
+                      </Button>
+                      <Button
+                        onClick={() => handleReject(transaction)}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Tolak
+                      </Button>
+                    </div>
+                  )}
                   
                   {transaction.expires_at && (
                     <div className="mt-4 pt-4 border-t border-gray-100">
