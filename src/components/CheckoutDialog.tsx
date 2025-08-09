@@ -93,10 +93,10 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
   // Format period display name
   const formatPeriodName = (period: string) => {
     const periodNames: { [key: string]: string } = {
-      'monthly': 'Bulanan',
-      'yearly': 'Tahunan',
-      'quarterly': 'Triwulan',
-      'weekly': 'Mingguan'
+      'monthly': '1 Bulan',
+      'quarterly': '3 Bulan', 
+      'semi_annual': '6 Bulan',
+      'yearly': '1 Tahun'
     };
     return periodNames[period] || period;
   };
@@ -128,9 +128,9 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
       const date = new Date();
       date.setMonth(date.getMonth() + 3);
       expiresAt = date.toISOString();
-    } else if (selectedPeriod === "weekly") {
+    } else if (selectedPeriod === "semi_annual") {
       const date = new Date();
-      date.setDate(date.getDate() + 7);
+      date.setMonth(date.getMonth() + 6);
       expiresAt = date.toISOString();
     }
 
@@ -199,7 +199,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
                 </div>
                 
                 {/* Period Selection */}
-                {availablePeriods.length > 1 && (
+                {availablePeriods.length > 0 && (
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
