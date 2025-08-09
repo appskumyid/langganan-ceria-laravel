@@ -163,35 +163,27 @@ const SubscriptionRenewal = () => {
           break;
       }
 
-      // Create new subscription record for renewal
+      // Update existing subscription for renewal instead of creating new record
       const renewalPrice = formatCurrency(calculateRenewalPrice());
       
-      const { data: newSubscription, error: insertError } = await supabase
+      const { error: updateError } = await supabase
         .from('user_subscriptions')
-        .insert({
-          user_id: subscription.user_id,
-          customer_name: subscription.customer_name,
-          customer_email: subscription.customer_email,
-          customer_phone: subscription.customer_phone,
-          product_name: subscription.product_name,
-          product_category: subscription.product_category,
-          product_type: subscription.product_type,
+        .update({
           product_price: renewalPrice,
           product_period: selectedPeriod,
-          product_static_id: subscription.product_static_id,
           subscription_status: 'waiting_confirmation',
           payment_method_selected: selectedPaymentMethod,
           payment_proof_url: paymentProofUrl,
           expires_at: newExpiry.toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        .select()
-        .single();
+        .eq('id', subscription.id);
 
-      if (insertError) throw insertError;
+      if (updateError) throw updateError;
 
       // Sync with mailchimp
       supabase.functions.invoke('mailchimp-sync', {
-        body: { subscription_id: newSubscription.id }
+        body: { subscription_id: subscription.id }
       }).then(({ error: funcError }) => {
         if (funcError) {
           console.warn("Mailchimp sync failed on renewal:", funcError.message);
