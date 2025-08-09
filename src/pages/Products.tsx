@@ -242,10 +242,10 @@ const Products = () => {
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           product={{
-            id: 0,
+            id: selectedProduct.id,
             name: selectedProduct.name,
-            price: (selectedProduct.pricing as any)?.monthly || '0',
-            period: (selectedProduct.pricing as any)?.monthly ? '/bulan' : '',
+            pricing: selectedProduct.pricing,
+            subscription_periods: selectedProduct.subscription_periods as string[] | null,
             category: selectedProduct.category,
             type: selectedProduct.type,
           }}

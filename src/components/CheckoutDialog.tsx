@@ -5,17 +5,18 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { CreditCard, Building2, Wallet, Smartphone, Loader2, Heart } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CreditCard, Building2, Wallet, Smartphone, Loader2, Heart, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 interface ProductForCheckout {
-  id: number;
+  id: string;
   name: string;
-  price: string;
-  period: string;
+  pricing: any;
+  subscription_periods: string[] | null;
   category: string;
   type: "Premium" | "Non-Premium";
 }
@@ -72,13 +73,33 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Get available periods and pricing
+  const availablePeriods = product.subscription_periods || [];
+  const pricing = product.pricing || {};
+  
+  // Set default period (prefer monthly if available)
+  const defaultPeriod = availablePeriods.includes('monthly') ? 'monthly' : availablePeriods[0] || '';
+  
   const [selectedPayment, setSelectedPayment] = useState("transfer");
+  const [selectedPeriod, setSelectedPeriod] = useState(defaultPeriod);
   const [isProcessing, setIsProcessing] = useState(false);
   const [donationAmount] = useState(generateDonationAmount());
 
-  // Calculate total payment amount
-  const basePrice = parseInt(product.price.replace(/[^\d]/g, '')) || 0;
+  // Calculate total payment amount based on selected period
+  const currentPrice = pricing[selectedPeriod] || 0;
+  const basePrice = parseInt(String(currentPrice).replace(/[^\d]/g, '')) || 0;
   const totalAmount = basePrice + donationAmount;
+
+  // Format period display name
+  const formatPeriodName = (period: string) => {
+    const periodNames: { [key: string]: string } = {
+      'monthly': 'Bulanan',
+      'yearly': 'Tahunan',
+      'quarterly': 'Triwulan',
+      'weekly': 'Mingguan'
+    };
+    return periodNames[period] || period;
+  };
 
   const handleCheckout = async () => {
     if (!user) {
@@ -95,18 +116,30 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
     setIsProcessing(true);
 
     let expiresAt = null;
-    if (product.period === "/bulan") {
+    if (selectedPeriod === "monthly") {
       const date = new Date();
       date.setMonth(date.getMonth() + 1);
+      expiresAt = date.toISOString();
+    } else if (selectedPeriod === "yearly") {
+      const date = new Date();
+      date.setFullYear(date.getFullYear() + 1);
+      expiresAt = date.toISOString();
+    } else if (selectedPeriod === "quarterly") {
+      const date = new Date();
+      date.setMonth(date.getMonth() + 3);
+      expiresAt = date.toISOString();
+    } else if (selectedPeriod === "weekly") {
+      const date = new Date();
+      date.setDate(date.getDate() + 7);
       expiresAt = date.toISOString();
     }
 
     const subscriptionData = {
       user_id: user.id,
-      product_static_id: product.id,
+      product_static_id: parseInt(product.id) || 0,
       product_name: product.name,
       product_price: formatCurrency(totalAmount), // Use total amount including donation
-      product_period: product.period,
+      product_period: `/${formatPeriodName(selectedPeriod).toLowerCase()}`,
       product_category: product.category,
       product_type: product.type,
       subscription_status: 'pending_payment' as const,
@@ -157,13 +190,48 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
           {/* Product Summary */}
           <Card>
             <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">{product.name}</h3>
-                  <p className="text-sm text-gray-600">Langganan {product.period}</p>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold">{product.name}</h3>
+                    <p className="text-sm text-gray-600">Pilih paket langganan</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg">{product.price}</p>
+                
+                {/* Period Selection */}
+                {availablePeriods.length > 1 && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Periode Langganan
+                    </Label>
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih periode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availablePeriods.map((period) => (
+                          <SelectItem key={period} value={period}>
+                            <div className="flex justify-between items-center w-full">
+                              <span>{formatPeriodName(period)}</span>
+                              <span className="ml-4 font-medium">
+                                {formatCurrency(parseInt(String(pricing[period]).replace(/[^\d]/g, '')) || 0)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm text-gray-600">
+                    Harga {formatPeriodName(selectedPeriod)}:
+                  </span>
+                  <span className="font-bold text-lg">
+                    {formatCurrency(basePrice)}
+                  </span>
                 </div>
               </div>
             </CardContent>
