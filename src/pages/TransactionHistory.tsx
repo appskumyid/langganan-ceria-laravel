@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Loader2, Receipt, Calendar, CreditCard, Check, X } from 'lucide-react';
+import { Loader2, Receipt, Calendar, CreditCard, Check, X, Download, FileText } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,22 +67,66 @@ const TransactionHistory = () => {
     return `TRX${year}${month}${day}${shortId}`;
   };
 
+  // Get subscription duration in months
+  const getSubscriptionDuration = (period: string) => {
+    const periodLower = period.toLowerCase();
+    if (periodLower.includes('3') && periodLower.includes('bulan')) {
+      return '3 Bulan';
+    } else if (periodLower.includes('6') && periodLower.includes('bulan')) {
+      return '6 Bulan';
+    } else if (periodLower.includes('tahun')) {
+      return '12 Bulan (1 Tahun)';
+    } else {
+      return '1 Bulan';
+    }
+  };
+
+  // Download payment proof
+  const handleDownloadProof = async (paymentProofUrl: string, transactionNumber: string) => {
+    try {
+      const response = await fetch(paymentProofUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `bukti_pembayaran_${transactionNumber}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Gagal mengunduh bukti pembayaran',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Admin functions for approval
   const handleApprove = async (transaction: Tables<'user_subscriptions'>) => {
     try {
-      const now = new Date();
+      // For renewal, calculate from current expiry date, not from now
       let expiresAt = new Date();
       
-      // Calculate expiry based on period
+      if (transaction.expires_at) {
+        // If there's an existing expiry date, extend from that date
+        expiresAt = new Date(transaction.expires_at);
+      } else {
+        // If no existing expiry, start from now
+        expiresAt = new Date();
+      }
+      
+      // Calculate additional period based on subscription period
       const period = transaction.product_period.toLowerCase();
       if (period.includes('3') && period.includes('bulan')) {
-        expiresAt.setMonth(now.getMonth() + 3);
+        expiresAt.setMonth(expiresAt.getMonth() + 3);
       } else if (period.includes('6') && period.includes('bulan')) {
-        expiresAt.setMonth(now.getMonth() + 6);
+        expiresAt.setMonth(expiresAt.getMonth() + 6);
       } else if (period.includes('tahun')) {
-        expiresAt.setFullYear(now.getFullYear() + 1);
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       } else {
-        expiresAt.setMonth(now.getMonth() + 1);
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
       }
 
       const { error } = await supabase
@@ -90,8 +134,7 @@ const TransactionHistory = () => {
         .update({
           subscription_status: 'active',
           expires_at: expiresAt.toISOString(),
-          subscribed_at: now.toISOString(),
-          updated_at: now.toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', transaction.id);
 
@@ -199,11 +242,31 @@ const TransactionHistory = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-lg">{transaction.product_price}</p>
-                      <p className="text-sm text-gray-500">{transaction.product_period}</p>
+                      <p className="text-sm text-gray-500">{getSubscriptionDuration(transaction.product_period)}</p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
+                  {/* Payment proof download for admin */}
+                  {isAdmin && transaction.payment_proof_url && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-700">Bukti Pembayaran</span>
+                        </div>
+                        <Button
+                          onClick={() => handleDownloadProof(transaction.payment_proof_url!, transactionNumber)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
