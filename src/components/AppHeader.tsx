@@ -273,7 +273,7 @@ const AppHeader = () => {
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 p-0">
+              <SheetContent side="left" className="w-80 p-0">
                 <div className="flex items-center justify-between p-6 border-b">
                   <h2 className="text-lg font-semibold">Menu</h2>
                   <Button 
