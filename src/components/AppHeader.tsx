@@ -263,13 +263,15 @@ const AppHeader = () => {
           </NavLink>
           
           {/* Desktop Navigation */}
-          {!isMobile && <DesktopNavigation />}
+          <div className="hidden md:block">
+            <DesktopNavigation />
+          </div>
           
           {/* Mobile Navigation */}
-          {isMobile && (
+          <div className="md:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden">
+                <Button variant="ghost" size="sm">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
@@ -287,7 +289,7 @@ const AppHeader = () => {
                 <MobileNavigation />
               </SheetContent>
             </Sheet>
-          )}
+          </div>
         </div>
       </div>
     </header>
