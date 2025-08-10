@@ -139,7 +139,7 @@ const CheckoutDialog = ({ isOpen, onClose, product }: CheckoutDialogProps) => {
       product_static_id: parseInt(product.id) || 0,
       product_name: product.name,
       product_price: formatCurrency(totalAmount), // Use total amount including donation
-      product_period: `/${formatPeriodName(selectedPeriod).toLowerCase()}`,
+      product_period: selectedPeriod, // Store the period key directly for consistency
       product_category: product.category,
       product_type: product.type,
       subscription_status: 'pending_payment' as const,

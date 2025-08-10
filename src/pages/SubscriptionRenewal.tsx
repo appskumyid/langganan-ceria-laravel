@@ -166,6 +166,7 @@ const SubscriptionRenewal = () => {
       // Update existing subscription for renewal instead of creating new record
       const renewalPrice = formatCurrency(calculateRenewalPrice());
       
+      // Don't update expires_at here - let admin approve and set the actual expiry date
       const { error: updateError } = await supabase
         .from('user_subscriptions')
         .update({
@@ -174,7 +175,6 @@ const SubscriptionRenewal = () => {
           subscription_status: 'waiting_confirmation',
           payment_method_selected: selectedPaymentMethod,
           payment_proof_url: paymentProofUrl,
-          expires_at: newExpiry.toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', subscription.id);

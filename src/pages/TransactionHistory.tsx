@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Loader2, Receipt, Calendar, CreditCard, Check, X, Download, FileText } from 'lucide-react';
+import { Loader2, Receipt, Calendar, CreditCard, Check, X, Download, FileText, Edit } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getStatusVariant } from '@/components/admin/subscriptions/utils';
 
@@ -18,6 +19,8 @@ const TransactionHistory = () => {
   const [transactions, setTransactions] = useState<Tables<'user_subscriptions'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingExpiry, setEditingExpiry] = useState<string | null>(null);
+  const [newExpiryDate, setNewExpiryDate] = useState('');
 
   const fetchTransactions = async () => {
     if (!user) {
@@ -67,17 +70,21 @@ const TransactionHistory = () => {
     return `TRX${year}${month}${day}${shortId}`;
   };
 
-  // Get subscription duration in months
+  // Get subscription duration in months - improved parsing
   const getSubscriptionDuration = (period: string) => {
     const periodLower = period.toLowerCase();
-    if (periodLower.includes('3') && periodLower.includes('bulan')) {
+    
+    // Handle different period formats
+    if (periodLower.includes('quarterly') || (periodLower.includes('3') && periodLower.includes('bulan'))) {
       return '3 Bulan';
-    } else if (periodLower.includes('6') && periodLower.includes('bulan')) {
+    } else if (periodLower.includes('semi_annual') || (periodLower.includes('6') && periodLower.includes('bulan'))) {
       return '6 Bulan';
-    } else if (periodLower.includes('tahun')) {
+    } else if (periodLower.includes('yearly') || periodLower.includes('tahun')) {
       return '12 Bulan (1 Tahun)';
-    } else {
+    } else if (periodLower.includes('monthly') || periodLower.includes('1') || periodLower.includes('bulan')) {
       return '1 Bulan';
+    } else {
+      return '1 Bulan'; // Default fallback
     }
   };
 
@@ -117,13 +124,13 @@ const TransactionHistory = () => {
         expiresAt = new Date();
       }
       
-      // Calculate additional period based on subscription period
+      // Calculate additional period based on subscription period - improved parsing
       const period = transaction.product_period.toLowerCase();
-      if (period.includes('3') && period.includes('bulan')) {
+      if (period.includes('quarterly') || (period.includes('3') && period.includes('bulan'))) {
         expiresAt.setMonth(expiresAt.getMonth() + 3);
-      } else if (period.includes('6') && period.includes('bulan')) {
+      } else if (period.includes('semi_annual') || (period.includes('6') && period.includes('bulan'))) {
         expiresAt.setMonth(expiresAt.getMonth() + 6);
-      } else if (period.includes('tahun')) {
+      } else if (period.includes('yearly') || period.includes('tahun')) {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       } else {
         expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -189,6 +196,57 @@ const TransactionHistory = () => {
         description: error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  // Admin function to edit expiry date
+  const handleEditExpiry = async (transactionId: string) => {
+    if (!newExpiryDate) {
+      toast({
+        title: 'Error',
+        description: 'Tanggal berakhir tidak boleh kosong',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          expires_at: new Date(newExpiryDate).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transactionId);
+
+      if (error) throw error;
+
+      // Refresh transactions
+      await fetchTransactions();
+      setEditingExpiry(null);
+      setNewExpiryDate('');
+
+      toast({
+        title: 'Berhasil',
+        description: 'Tanggal berakhir berhasil diperbarui',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const startEditExpiry = (transactionId: string, currentExpiry: string | null) => {
+    setEditingExpiry(transactionId);
+    if (currentExpiry) {
+      // Format date for input (YYYY-MM-DD)
+      const date = new Date(currentExpiry);
+      setNewExpiryDate(date.toISOString().split('T')[0]);
+    } else {
+      setNewExpiryDate('');
     }
   };
 
@@ -343,13 +401,53 @@ const TransactionHistory = () => {
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-500">Berakhir pada:</span>
-                        <span className="font-medium">
-                          {new Date(transaction.expires_at).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {editingExpiry === transaction.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="date"
+                                value={newExpiryDate}
+                                onChange={(e) => setNewExpiryDate(e.target.value)}
+                                className="w-40"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleEditExpiry(transaction.id)}
+                              >
+                                Simpan
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingExpiry(null);
+                                  setNewExpiryDate('');
+                                }}
+                              >
+                                Batal
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-medium">
+                                {new Date(transaction.expires_at).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                              {isAdmin && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditExpiry(transaction.id, transaction.expires_at)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
