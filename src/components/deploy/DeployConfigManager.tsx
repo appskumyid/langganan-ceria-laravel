@@ -91,9 +91,12 @@ export const DeployConfigManager = () => {
           .eq('id', editingConfig.id);
         if (error) throw error;
       } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { error } = await supabase
           .from('deploy_configs')
-          .insert([data]);
+          .insert([{ ...data, user_id: user.id }]);
         if (error) throw error;
       }
     },
