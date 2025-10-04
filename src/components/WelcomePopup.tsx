@@ -66,7 +66,7 @@ const WelcomePopup = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 bg-gradient-to-br from-background via-background to-muted/20 border-0 shadow-2xl">
         {/* Header with gradient background */}
-        <div className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-4 sm:p-6 rounded-t-lg">
+        <div className="relative bg-gradient-to-r from-primary/30 via-accent/20 to-primary/30 p-4 sm:p-6 rounded-t-lg backdrop-blur-sm shadow-lg">
           <div className="flex items-start justify-between gap-4">
             <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent pr-8">
               {popupSettings?.popup_title}
@@ -102,7 +102,7 @@ const WelcomePopup = () => {
           </DialogDescription>
           
           {/* Enhanced button area */}
-          <div className="flex justify-center pt-4 sm:pt-6">
+          <div className="flex justify-center pt-4 sm:pt-6 pb-2 px-4 sm:px-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 bg-gradient-to-t from-primary/20 via-accent/10 to-transparent rounded-b-lg">
             <Button 
               onClick={handleClose} 
               className="px-8 sm:px-12 py-3 w-full sm:w-auto bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
