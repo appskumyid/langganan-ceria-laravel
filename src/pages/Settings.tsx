@@ -6,6 +6,8 @@ import { DeployConfigManager } from "@/components/deploy/DeployConfigManager";
 import { AdminFileManager } from "@/components/AdminFileManager";
 import AdminSettings from "@/components/AdminSettings";
 import { useUserRole } from "@/hooks/useUserRole";
+import ChangePassword from "@/pages/ChangePassword";
+import ProductCategoryManager from "@/components/ProductCategoryManager";
 
 const Settings = () => {
   const { isAdmin } = useUserRole();
@@ -18,11 +20,12 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="general">Umum</TabsTrigger>
           <TabsTrigger value="ssh-keys">SSH Keys</TabsTrigger>
           <TabsTrigger value="deploy-config">Deploy Config</TabsTrigger>
           {isAdmin && <TabsTrigger value="file-manager">File Manager</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="product-categories">Kategori Produk</TabsTrigger>}
           <TabsTrigger value="profile">Profil</TabsTrigger>
         </TabsList>
 
@@ -64,6 +67,22 @@ const Settings = () => {
           </TabsContent>
         )}
 
+        {isAdmin && (
+          <TabsContent value="product-categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Kelola Kategori Produk</CardTitle>
+                <CardDescription>
+                  Atur dan kelola kategori produk untuk mengorganisir produk yang tersedia
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProductCategoryManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         <TabsContent value="profile">
           <Card>
             <CardHeader>
@@ -73,9 +92,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <p>Fitur pengaturan profil akan segera tersedia.</p>
-              </div>
+              <ChangePassword />
             </CardContent>
           </Card>
         </TabsContent>

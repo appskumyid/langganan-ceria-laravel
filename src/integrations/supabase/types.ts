@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -208,6 +208,7 @@ export type Database = {
           ssh_key_id: string | null
           type: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -222,6 +223,7 @@ export type Database = {
           ssh_key_id?: string | null
           type: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -236,6 +238,7 @@ export type Database = {
           ssh_key_id?: string | null
           type?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -243,6 +246,41 @@ export type Database = {
             columns: ["ssh_key_id"]
             isOneToOne: false
             referencedRelation: "ssh_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deployment_status: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          subdomain: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          subdomain: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          subdomain?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deployment_status_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -383,6 +421,33 @@ export type Database = {
           id?: string
           name?: string
           pricing?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain_name: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain_name?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain_name?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -732,6 +797,7 @@ export type Database = {
           product_static_id: number
           product_type: string
           rejection_reason: string | null
+          subdomain: string | null
           subscribed_at: string
           subscription_status: string
           updated_at: string
@@ -753,6 +819,7 @@ export type Database = {
           product_static_id: number
           product_type: string
           rejection_reason?: string | null
+          subdomain?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string
@@ -774,6 +841,7 @@ export type Database = {
           product_static_id?: number
           product_type?: string
           rejection_reason?: string | null
+          subdomain?: string | null
           subscribed_at?: string
           subscription_status?: string
           updated_at?: string
@@ -862,8 +930,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }

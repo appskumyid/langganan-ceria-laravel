@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Zap, Package } from 'lucide-react';
+import { Loader2, Zap, Package, Globe } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EcommercePublishManagerProps {
   subscription: Tables<'user_subscriptions'>;
@@ -168,18 +169,46 @@ export const EcommercePublishManager = ({ subscription }: EcommercePublishManage
     },
   });
 
+  const { data: deploymentStatus } = useQuery({
+    queryKey: ['deployment_status', subscription.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deployment_status')
+        .select('*')
+        .eq('subscription_id', subscription.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+  });
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       if (!storeDetails) {
         throw new Error("Detail toko belum diisi. Silakan isi detail toko terlebih dahulu.");
       }
+      
+      // First generate the files
       await generateUserFiles(subscription, storeDetails, transactionNumber);
+      
+      // Then call the publish edge function for subdomain and sync
+      const { data, error } = await supabase.functions.invoke('publish-website', {
+        body: { subscriptionId: subscription.id }
+      });
+
+      if (error) throw error;
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['user_generated_files', subscription.id] });
+      queryClient.invalidateQueries({ queryKey: ['deployment_status', subscription.id] });
       toast({
-        title: 'Sukses',
-        description: `Website berhasil di-publish ke folder files/${transactionNumber}/`
+        title: 'Website sedang dalam persiapan',
+        description: data?.message || 'Website dan domain Anda sedang dalam persiapan. Estimasi waktu aktif 1-10 menit.'
       });
     },
     onError: (error: any) => {
@@ -204,7 +233,51 @@ export const EcommercePublishManager = ({ subscription }: EcommercePublishManage
           <div className="text-sm text-gray-600">
             <p>Kode Transaksi: <span className="font-mono font-semibold">#{transactionNumber}</span></p>
             <p>Folder Publikasi: <span className="font-mono">files/{transactionNumber}/</span></p>
+            {subscription.subdomain && (
+              <p>Domain: <span className="font-mono font-semibold">{subscription.subdomain}.appsku.my.id</span></p>
+            )}
           </div>
+
+          {/* Deployment Status */}
+          {deploymentStatus && (
+            <Alert className={
+              deploymentStatus.status === 'completed' ? 'border-green-200 bg-green-50' :
+              deploymentStatus.status === 'failed' ? 'border-red-200 bg-red-50' :
+              'border-blue-200 bg-blue-50'
+            }>
+              <Globe className="h-4 w-4" />
+              <AlertDescription>
+                {deploymentStatus.status === 'preparing' && (
+                  <>
+                    <strong>Website sedang dalam persiapan...</strong>
+                    <br />
+                    Domain: {deploymentStatus.subdomain}.appsku.my.id (Estimasi aktif 1-10 menit)
+                  </>
+                )}
+                {deploymentStatus.status === 'completed' && (
+                  <>
+                    <strong>Website berhasil dipublish!</strong>
+                    <br />
+                    Domain: <a 
+                      href={`https://${deploymentStatus.subdomain}.appsku.my.id`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      {deploymentStatus.subdomain}.appsku.my.id
+                    </a>
+                  </>
+                )}
+                {deploymentStatus.status === 'failed' && (
+                  <>
+                    <strong>Gagal mempublish website</strong>
+                    <br />
+                    Silakan coba lagi atau hubungi support jika masalah berlanjut.
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {generatedFiles && generatedFiles.length > 0 ? (
             <div className="space-y-4">
