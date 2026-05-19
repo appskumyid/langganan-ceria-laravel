@@ -911,6 +911,12 @@ export type Database = {
           type: Database["public"]["Enums"]["product_type_enum"]
           updated_at: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "managed_products"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_random_store_products: {
         Args: { limit_count: number }
@@ -927,6 +933,12 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "store_products"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_role: {
         Args: {
