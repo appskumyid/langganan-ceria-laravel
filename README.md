@@ -116,6 +116,35 @@ sudo docker compose up -d --build
 
 Aplikasi Anda sekarang seharusnya berjalan. Anda dapat mengaksesnya melalui port yang telah dikonfigurasi (defaultnya adalah port 80 untuk aplikasi dan 8000 untuk Supabase Kong gateway).
 
+### Langkah 5: Seed Database (Otomatis)
+
+Saat container `db` pertama kali dijalankan, Postgres akan mengeksekusi semua file SQL di `/docker-entrypoint-initdb.d/` secara alfabetik:
+
+1. Semua migrasi di `supabase/migrations/*.sql` — membuat tabel, RLS policies, functions, dan triggers.
+2. File `supabase/seed.sql` — mengisi data awal: `app_settings` (branding, banner, popup, footer, kontak), `product_categories`, contoh `managed_products`, dan contoh `managed_services`.
+
+Seed bersifat **idempotent** (memakai `ON CONFLICT DO NOTHING`), jadi aman bila dijalankan ulang.
+
+> Untuk me-reset dan menjalankan ulang seed dari nol:
+> ```sh
+> sudo docker compose down -v   # menghapus volume db_data
+> sudo docker compose up -d --build
+> ```
+
+### Langkah 6: Buat Akun Admin Pertama
+
+1. Buka aplikasi di browser dan **daftar** akun lewat halaman `/auth`.
+2. Masuk ke container database dan promosikan user tersebut menjadi admin:
+
+```sh
+sudo docker exec -it supabase_db psql -U supabase -d postgres -c \
+  "UPDATE public.user_roles SET role = 'admin' WHERE user_id = (SELECT id FROM auth.users WHERE email = 'you@example.com');"
+```
+
+Setelah itu, login ulang — menu admin akan muncul.
+
+
+
 ## What technologies are used for this project?
 
 This project is built with:
